@@ -1,0 +1,103 @@
+rules_version = '2';
+
+// Regras do "Desafio em Família".
+//
+// Princípio: os dados são privados da família. Só quem está no mesmo
+// `familyId` lê o cofre, os registros e o mural.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // familyId do usuário autenticado (1 leitura extra, aceitável no MVP).
+    function myFamilyId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid))
+             .data.familyId;
+    }
+
+    function sameFamily(familyId) {
+      return isSignedIn() && familyId != null && familyId == myFamilyId();
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // --- users ------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isSignedIn() &&
+        (request.auth.uid == userId || sameFamily(resource.data.familyId));
+
+      allow create: if isSignedIn() && request.auth.uid == userId;
+
+      // O próprio dono edita tudo. Um integrante da mesma família só pode
+      // mexer nos campos que a Carta Salva-Mãe/Pai altera.
+      //
+      // TODO (escala): mover a doação para uma Cloud Function e remover o
+      // segundo ramo — aí nenhum cliente escreve no perfil alheio.
+      allow update: if isSignedIn() && (
+        request.auth.uid == userId ||
+        (sameFamily(resource.data.familyId) && changedKeys().hasOnly([
+          'weeklyPoints', 'totalPoints', 'weekId', 'currentStreak',
+          'longestStreak', 'lastActivityAt', 'statusMessage', 'updatedAt'
+        ]))
+      );
+
+      allow delete: if false;
+    }
+
+    // --- families ---------------------------------------------------------
+    match /families/{familyId} {
+      // Leitura liberada para quem já é membro; a busca por código de convite
+      // acontece antes de entrar, por isso o segundo termo.
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn() &&
+        request.resource.data.memberIds.hasAny([request.auth.uid]);
+
+      allow update: if isSignedIn() && (
+        sameFamily(familyId) ||
+        // entrar na família: só pode acrescentar o próprio uid
+        (changedKeys().hasOnly(['memberIds']) &&
+         request.resource.data.memberIds.hasAll(resource.data.memberIds) &&
+         request.resource.data.memberIds.size() <= 4)
+      );
+
+      allow delete: if false;
+    }
+
+    // --- activity_logs ----------------------------------------------------
+    match /activity_logs/{logId} {
+      allow read: if sameFamily(resource.data.familyId);
+
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        sameFamily(request.resource.data.familyId) &&
+        request.resource.data.points is int &&
+        request.resource.data.points > 0 &&
+        request.resource.data.points <= 2000;
+
+      // Histórico é imutável: correções entram como novo registro.
+      allow update, delete: if false;
+    }
+
+    // --- feed_posts -------------------------------------------------------
+    match /feed_posts/{postId} {
+      allow read: if sameFamily(resource.data.familyId);
+
+      allow create: if isSignedIn() &&
+        sameFamily(request.resource.data.familyId) &&
+        (request.resource.data.authorId == request.auth.uid ||
+         request.resource.data.authorId == 'system');
+
+      // Qualquer integrante reage; só o autor apaga o próprio post.
+      allow update: if sameFamily(resource.data.familyId) &&
+        changedKeys().hasOnly(['reactions']);
+
+      allow delete: if isSignedIn() &&
+        resource.data.authorId == request.auth.uid;
+    }
+  }
+}
