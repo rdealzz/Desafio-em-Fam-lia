@@ -1,4 +1,26 @@
-# Publicar a versão web na Vercel
+# Publicar a versão web
+
+Dois caminhos independentes. Se um travar, o outro serve.
+
+| | GitHub Pages | Vercel |
+|---|---|---|
+| Conta em outro serviço | não | sim |
+| Configuração | 1 clique em Settings | importar o repositório |
+| Build | GitHub Actions (log legível) | script que baixa o Flutter |
+
+## Caminho curto: GitHub Pages
+
+Um passo, uma vez só:
+
+**Settings → Pages → Build and deployment → Source: `GitHub Actions`**
+
+Pronto. Cada push na `main` publica em
+`https://rdealzz.github.io/Desafio-em-Fam-lia/`. O log fica em
+**Actions → Publicar no GitHub Pages**.
+
+---
+
+# Vercel
 
 A página publicada roda em **modo demonstração**: dados de mentira, sem
 Firebase, sem conta. Serve para ver a interface e mostrar para a família.

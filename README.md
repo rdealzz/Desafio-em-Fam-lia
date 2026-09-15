@@ -238,7 +238,11 @@ Serve para ver a interface e mostrar para a família antes de instalar nada.
 flutter run -d chrome --dart-define=DEMO_MODE=true
 ```
 
-O deploy está configurado em `vercel.json`. É só ligar o repositório na Vercel
+**Caminho mais curto — GitHub Pages:** ative em
+**Settings → Pages → Source: `GitHub Actions`**. Cada push na `main` publica em
+`https://rdealzz.github.io/Desafio-em-Fam-lia/`, sem conta em outro serviço.
+
+O deploy na Vercel está configurado em `vercel.json`. É só ligar o repositório na Vercel
 (**Root Directory** na raiz, **Framework Preset** `Other`) — ela lê o arquivo,
 baixa o Flutter e publica `build/web`. Cada push na `main` gera um deploy novo.
 
