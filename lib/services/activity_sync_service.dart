@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 
@@ -31,6 +31,10 @@ class ActivitySyncService extends ChangeNotifier {
   bool get syncing => _syncing;
   bool get hasPending => _pending.isNotEmpty;
 
+  /// Falso no navegador: sem sistema de arquivos não há onde guardar a foto,
+  /// e sem a foto o registro seria recusado pelas regras.
+  bool get isAvailable => _store.supportsOfflineQueue;
+
   Future<void> refresh() async {
     _pending = await _store.load();
     notifyListeners();
@@ -45,7 +49,7 @@ class ActivitySyncService extends ChangeNotifier {
     required ActivityType type,
     required int durationMinutes,
     int steps = 0,
-    File? photo,
+    Uint8List? photoBytes,
     String note = '',
     DateTime? performedAt,
   }) async {
@@ -57,7 +61,7 @@ class ActivitySyncService extends ChangeNotifier {
       durationMinutes: durationMinutes,
       steps: steps,
       note: note,
-      photoPath: await _store.persistPhoto(photo),
+      photoPath: await _store.persistPhoto(photoBytes),
       performedAt: performedAt ?? DateTime.now(),
     );
 
@@ -84,11 +88,15 @@ class ActivitySyncService extends ChangeNotifier {
           continue;
         }
 
-        final photo = item.photoPath == null ? null : File(item.photoPath!);
-        if (photo != null && !photo.existsSync()) {
-          // Foto sumiu do disco: sem a prova o registro seria recusado.
-          await _store.remove(item.id);
-          continue;
+        Uint8List? photoBytes;
+        final path = item.photoPath;
+        if (path != null) {
+          photoBytes = await _store.readPhoto(path);
+          if (photoBytes == null) {
+            // Foto sumiu do disco: sem a prova o registro seria recusado.
+            await _store.remove(item.id);
+            continue;
+          }
         }
 
         try {
@@ -97,7 +105,7 @@ class ActivitySyncService extends ChangeNotifier {
             type: item.type,
             durationMinutes: item.durationMinutes,
             steps: item.steps,
-            photo: photo,
+            photoBytes: photoBytes,
             note: item.note,
             source: 'offline_queue',
             performedAt: item.performedAt,

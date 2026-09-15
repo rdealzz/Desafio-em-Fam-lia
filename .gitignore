@@ -34,3 +34,6 @@ ios/Runner/GoogleService-Info.plist
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Build web
+build/

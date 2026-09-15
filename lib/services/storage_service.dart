@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -10,16 +10,18 @@ class StorageService {
 
   /// Guarda em `families/{familyId}/proofs/{userId}/{timestamp}.jpg`.
   /// O caminho por família permite regra de segurança simples no Storage.
+  /// Recebe bytes, não arquivo: `putData` funciona no celular e no navegador,
+  /// enquanto `putFile` depende de `dart:io` e quebraria a build web.
   Future<String> uploadActivityProof({
     required String familyId,
     required String userId,
-    required File file,
+    required Uint8List bytes,
   }) async {
     final name = '${DateTime.now().millisecondsSinceEpoch}.jpg';
     final ref = _storage.ref('families/$familyId/proofs/$userId/$name');
 
-    await ref.putFile(
-      file,
+    await ref.putData(
+      bytes,
       SettableMetadata(
         contentType: 'image/jpeg',
         customMetadata: {'userId': userId, 'familyId': familyId},
@@ -31,10 +33,10 @@ class StorageService {
 
   Future<String> uploadAvatar({
     required String userId,
-    required File file,
+    required Uint8List bytes,
   }) async {
     final ref = _storage.ref('avatars/$userId.jpg');
-    await ref.putFile(file, SettableMetadata(contentType: 'image/jpeg'));
+    await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
     return ref.getDownloadURL();
   }
 }

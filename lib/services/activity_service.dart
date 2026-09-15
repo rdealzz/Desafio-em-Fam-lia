@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -57,7 +57,7 @@ class ActivityService {
     required ActivityType type,
     required int durationMinutes,
     int steps = 0,
-    File? photo,
+    Uint8List? photoBytes,
     String note = '',
     String source = 'manual',
     DateTime? performedAt,
@@ -82,12 +82,12 @@ class ActivityService {
     }
 
     String? photoUrl;
-    if (photo != null) {
+    if (photoBytes != null) {
       photoUrl = await _storage
           .uploadActivityProof(
             familyId: user.familyId,
             userId: user.id,
-            file: photo,
+            bytes: photoBytes,
           )
           // Sem rede o upload fica pendurado tentando de novo. O prazo devolve
           // o controle para quem chamou, que decide entre avisar ou enfileirar.

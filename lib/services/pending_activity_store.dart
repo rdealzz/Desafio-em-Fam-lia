@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/pending_activity.dart';
+import 'photo_cache.dart';
 
 /// Guarda a fila de registros offline no disco do aparelho.
 ///
@@ -12,10 +12,16 @@ import '../models/pending_activity.dart';
 /// documentos do app para as fotos — o cache do `image_picker` é temporário e
 /// o sistema apaga quando quer.
 class PendingActivityStore {
-  PendingActivityStore();
+  PendingActivityStore({PhotoCache photoCache = const PhotoCache()})
+      : _photoCache = photoCache;
+
+  final PhotoCache _photoCache;
 
   static const String _key = 'pending_activities_v1';
-  static const String _photoDir = 'pending_photos';
+
+  /// Se dá para guardar a foto entre sessões. Falso no navegador — e sem isso
+  /// a fila offline não tem como existir, porque o registro exige a prova.
+  bool get supportsOfflineQueue => _photoCache.isAvailable;
 
   Future<List<PendingActivity>> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -27,27 +33,17 @@ class PendingActivityStore {
     await prefs.setString(_key, PendingActivity.encodeList(items));
   }
 
-  /// Copia a foto para um lugar permanente e devolve o novo caminho.
+  /// Guarda a foto num lugar permanente e devolve o caminho.
   ///
   /// Sem isso, a foto some entre o registro e a sincronização — e o registro
   /// chega sem a prova que o app exige.
-  Future<String?> persistPhoto(File? photo) async {
-    if (photo == null) return null;
-    try {
-      final dir = Directory(
-        '${(await getApplicationDocumentsDirectory()).path}/$_photoDir',
-      );
-      if (!dir.existsSync()) dir.createSync(recursive: true);
-      final name = '${DateTime.now().millisecondsSinceEpoch}_'
-          '${Random().nextInt(9999)}.jpg';
-      final copy = await photo.copy('${dir.path}/$name');
-      return copy.path;
-    } catch (_) {
-      // Não conseguir copiar a foto não pode derrubar o registro; a
-      // sincronização vai falhar na exigência de foto e avisar.
-      return null;
-    }
+  Future<String?> persistPhoto(Uint8List? bytes) async {
+    if (bytes == null) return null;
+    return _photoCache.save(bytes);
   }
+
+  /// Lê de volta a foto guardada, para enviar ao Storage.
+  Future<Uint8List?> readPhoto(String path) => _photoCache.read(path);
 
   Future<void> add(PendingActivity item) async {
     final items = await load();
@@ -70,13 +66,7 @@ class PendingActivityStore {
 
     for (final item in removed) {
       final path = item.photoPath;
-      if (path == null) continue;
-      try {
-        final file = File(path);
-        if (file.existsSync()) await file.delete();
-      } catch (_) {
-        // Foto órfã ocupa pouco espaço; não vale falhar por isso.
-      }
+      if (path != null) await _photoCache.delete(path);
     }
   }
 

@@ -91,9 +91,13 @@ lib/
 │   └── health_service.dart    # ponte para HealthKit / Google Fit
 │
 ├── state/session_controller.dart  # usuário + família + integrantes em tempo real
+├── demo/                      # vitrine com dados de mentira (modo DEMO_MODE)
 ├── screens/                   # as 3 telas + login + perfil
 └── widgets/                   # cofre, avatares, prêmios, post do feed, cartas
 
+web/                           # index.html e manifest da versão navegador
+vercel.json                    # deploy da versão web
+scripts/vercel_build.sh        # baixa o Flutter e compila na Vercel
 scripts/create_firebase_project.sh  # cria o projeto Firebase do zero
 scripts/setup_firebase.sh      # liga o app a um projeto Firebase real
 scripts/run_emulators.sh       # sobe os emuladores locais
@@ -222,6 +226,39 @@ Enquanto o Firebase não estiver ligado, o app abre uma **tela de setup** com
 os comandos — nunca uma tela branca.
 
 Detalhes e solução de problemas: [`docs/firebase_setup.md`](docs/firebase_setup.md)
+
+### Versão web (a página que a Vercel publica)
+
+O app também compila para navegador. A versão publicada roda em **modo
+demonstração**: dados de mentira, nenhum servidor, ninguém precisa criar conta.
+Serve para ver a interface e mostrar para a família antes de instalar nada.
+
+```bash
+flutter run -d chrome --dart-define=DEMO_MODE=true
+```
+
+O deploy está configurado em `vercel.json`. É só ligar o repositório na Vercel —
+ela lê o arquivo, baixa o Flutter e publica `build/web`. Cada push na `main`
+gera um deploy novo.
+
+> **Primeiro deploy demora.** O ambiente da Vercel não tem Flutter, então o
+> build clona o SDK (~200 MB) antes de compilar.
+
+Para publicar ligado no Firebase de verdade em vez da demonstração, tire o
+`--dart-define=DEMO_MODE=true` de `scripts/vercel_build.sh` e preencha a seção
+`web` de `lib/firebase_options.dart`.
+
+#### O que muda no navegador
+
+| | Celular | Navegador |
+|---|---|---|
+| Registrar, cofre, cartas, mural | ✅ | ✅ |
+| Foto comprovante | ✅ | ✅ |
+| **Fila offline** | ✅ | ❌ |
+
+A fila offline precisa guardar a foto entre sessões, e no navegador não há
+sistema de arquivos para isso. `PhotoCache` resolve isso por importação
+condicional: `dart:io` sequer entra na compilação web.
 
 ### Testes
 

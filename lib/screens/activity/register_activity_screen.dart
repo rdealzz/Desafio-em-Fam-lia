@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -38,7 +38,8 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
   ActivityType _type = ActivityType.walk;
   int _minutes = 30;
   int _steps = 0;
-  File? _photo;
+  /// Bytes, não arquivo: é o que funciona no celular e no navegador.
+  Uint8List? _photoBytes;
   bool _saving = false;
   bool _loadingSteps = false;
 
@@ -72,7 +73,7 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
     // prova, não dispensá-la.
     final requiresPhoto =
         context.watch<SessionController>().family?.requirePhotoProof ?? true;
-    final missingPhoto = requiresPhoto && _photo == null;
+    final missingPhoto = requiresPhoto && _photoBytes == null;
 
     return Scaffold(
       body: SafeArea(
@@ -228,10 +229,10 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
 
             // --- Foto comprovante -----------------------------------------
             _PhotoPicker(
-              photo: _photo,
+              photoBytes: _photoBytes,
               required: requiresPhoto,
               onPick: _pickPhoto,
-              onRemove: () => setState(() => _photo = null),
+              onRemove: () => setState(() => _photoBytes = null),
             ),
             const SizedBox(height: 18),
 
@@ -311,9 +312,11 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
       maxWidth: 1440,
     );
 
-    if (picked != null && mounted) {
-      setState(() => _photo = File(picked.path));
-    }
+    if (picked == null) return;
+    // Lê os bytes na hora: no navegador não existe caminho de arquivo, e no
+    // celular o cache do picker pode ser apagado a qualquer momento.
+    final bytes = await picked.readAsBytes();
+    if (mounted) setState(() => _photoBytes = bytes);
   }
 
   Future<void> _importSteps() async {
@@ -360,7 +363,7 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
             type: _type,
             durationMinutes: _minutes,
             steps: _steps,
-            photo: _photo,
+            photoBytes: _photoBytes,
             note: _noteController.text.trim(),
             performedAt: performedAt,
           );
@@ -369,7 +372,7 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
 
       // Volta ao estado inicial para o próximo registro.
       setState(() {
-        _photo = null;
+        _photoBytes = null;
         _steps = 0;
         _minutes = 30;
         _stepsController.clear();
@@ -396,7 +399,7 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
   /// da perspectiva de quem treinou, está registrado; só ainda não subiu.
   Future<void> _guardarParaDepois(AppUser user, DateTime performedAt) async {
     final note = _noteController.text.trim();
-    final photo = _photo;
+    final photo = _photoBytes;
     final type = _type;
     final minutes = _minutes;
     final steps = _steps;
@@ -407,7 +410,7 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
             type: type,
             durationMinutes: minutes,
             steps: steps,
-            photo: photo,
+            photoBytes: photo,
             note: note,
             performedAt: performedAt,
           );
@@ -424,7 +427,7 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
 
     if (!mounted) return;
     setState(() {
-      _photo = null;
+      _photoBytes = null;
       _steps = 0;
       _minutes = 30;
       _stepsController.clear();
@@ -655,13 +658,13 @@ class _BreakdownLine extends StatelessWidget {
 
 class _PhotoPicker extends StatelessWidget {
   const _PhotoPicker({
-    required this.photo,
+    required this.bytes,
     required this.required,
     required this.onPick,
     required this.onRemove,
   });
 
-  final File? photo;
+  final Uint8List? bytes;
 
   /// Quando a família exige comprovante, o vazio é um bloqueio — e precisa
   /// parecer um: contorno laranja e a palavra "obrigatória".
@@ -672,7 +675,7 @@ class _PhotoPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (photo == null) {
+    if (bytes == null) {
       final accent = required ? AppColors.secondary : AppColors.primary;
       return InkWell(
         onTap: onPick,
@@ -721,8 +724,8 @@ class _PhotoPicker extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(20),
-          child: Image.file(
-            photo!,
+          child: Image.memory(
+            bytes!,
             width: double.infinity,
             height: 200,
             fit: BoxFit.cover,

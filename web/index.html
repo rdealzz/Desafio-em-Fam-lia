@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>Desafio em Família</title>
+  <meta name="description" content="Um cofre de pontos, quatro pessoas, um prêmio por semana.">
+
+  <base href="$FLUTTER_BASE_HREF">
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6C4DF6">
+
+  <!-- Instalável como app no celular -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Desafio em Família">
+
+  <style>
+    body { margin: 0; background: #F6F5FB; }
+    /* Tela de carregamento enquanto o Flutter inicializa — sem isso o
+       primeiro segundo é uma página em branco. */
+    #carregando {
+      position: fixed; inset: 0; display: flex; align-items: center;
+      justify-content: center; flex-direction: column; gap: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #6E6B8A; background: #F6F5FB;
+    }
+    #carregando .emoji { font-size: 48px; }
+    #carregando .nome { font-size: 17px; font-weight: 700; color: #1C1B2E; }
+    @keyframes pulsa { 0%, 100% { opacity: 1 } 50% { opacity: .45 } }
+    #carregando .emoji { animation: pulsa 1.4s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+  <div id="carregando">
+    <div class="emoji">🏆</div>
+    <div class="nome">Desafio em Família</div>
+    <div>carregando…</div>
+  </div>
+
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('carregando');
+      if (el) el.remove();
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
