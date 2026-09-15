@@ -1,17 +1,13 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'app.dart';
-import 'firebase_options.dart';
+import 'core/config/firebase_bootstrap.dart';
+import 'screens/setup/firebase_setup_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
 
   // Datas e números em português para todo o app.
   await initializeDateFormatting('pt_BR', null);
@@ -20,5 +16,13 @@ Future<void> main() async {
     DeviceOrientation.portraitUp,
   ]);
 
-  runApp(const DesafioEmFamiliaApp());
+  // Sem chaves ou com o Firebase fora do ar, o app abre a tela de setup em vez
+  // de morrer no arranque.
+  final startup = await FirebaseBootstrap.initialize();
+
+  runApp(
+    startup.isReady
+        ? const DesafioEmFamiliaApp()
+        : FirebaseSetupApp(startup: startup),
+  );
 }

@@ -63,6 +63,8 @@ lib/
 ├── firebase_options.dart      # GERADO por `flutterfire configure`
 │
 ├── core/
+│   ├── config/
+│   │   └── firebase_bootstrap.dart  # produção, emulador ou tela de setup
 │   ├── theme/app_theme.dart   # cores, tipografia, botões grandes
 │   └── utils/                 # semana ISO, formatação, conversão Firestore
 │
@@ -81,6 +83,9 @@ lib/
 ├── screens/                   # as 3 telas + login
 └── widgets/                   # cofre, avatares, prêmios, post do feed, cartas
 
+scripts/setup_firebase.sh      # liga o app a um projeto Firebase real
+scripts/run_emulators.sh       # sobe os emuladores locais
+docs/firebase_setup.md         # guia de ligação + solução de problemas
 docs/firestore_schema.md       # schema JSON de cada coleção
 firestore.rules                # segurança: dados privados da família
 storage.rules
@@ -106,60 +111,49 @@ Se alguém escreveu no meio do caminho, o Firestore repete a operação sozinho.
 
 ## Rodando o projeto
 
-### 1. Pré-requisitos
+### Só quero ver funcionando (sem conta Firebase)
 
-- Flutter 3.22+ (`flutter --version`)
-- Conta no [Firebase](https://console.firebase.google.com)
-- Firebase CLI: `npm i -g firebase-tools && firebase login`
-
-### 2. Criar a plataforma nativa
-
-Este repositório tem só o código Dart. Gere as pastas `android/` e `ios/`:
+Roda contra o Firebase Emulator Suite — Auth, Firestore e Storage locais.
+Dá para criar a família, registrar atividade, subir foto e usar as cartas.
 
 ```bash
-flutter create . --project-name desafio_em_familia \
-  --org com.seudominio --platforms=android,ios
-flutter pub get
+# Terminal 1
+./scripts/run_emulators.sh
+
+# Terminal 2
+flutter run --dart-define=USE_FIREBASE_EMULATOR=true
 ```
 
-### 3. Conectar o Firebase
+Painel dos emuladores em <http://localhost:4000>.
 
-No console do Firebase, crie um projeto e ative:
+### Ligando no Firebase de verdade
 
-- **Authentication** → método *E-mail/senha*
-- **Cloud Firestore** → modo produção
-- **Storage**
+1. Em <https://console.firebase.google.com>, crie um projeto e ative
+   **Authentication** (e-mail/senha), **Cloud Firestore** e **Storage**
+   (região `southamerica-east1` para quem está no Brasil).
 
-Depois, na raiz do projeto:
+2. Rode o script:
 
 ```bash
-dart pub global activate flutterfire_cli
-flutterfire configure --project=SEU_PROJETO
+./scripts/setup_firebase.sh
 ```
 
-Isso sobrescreve `lib/firebase_options.dart` com as chaves reais e baixa o
-`google-services.json` / `GoogleService-Info.plist`. Esses dois arquivos estão
-no `.gitignore` — cada pessoa gera o seu.
+Ele confere as ferramentas, gera `android/` e `ios/`, roda o
+`flutterfire configure`, ajusta a configuração nativa (minSdk 23 e as
+permissões de câmera/galeria do iOS) e publica as regras e índices.
 
-### 4. Publicar as regras e índices
+3. `flutter run`
 
-```bash
-firebase deploy --only firestore:rules,firestore:indexes,storage
-```
+Enquanto o Firebase não estiver ligado, o app abre uma **tela de setup** com
+os comandos — nunca uma tela branca.
 
-### 5. Rodar
+Detalhes e solução de problemas: [`docs/firebase_setup.md`](docs/firebase_setup.md)
 
-```bash
-flutter run
-```
-
-### 6. Testes
+### Testes
 
 ```bash
 flutter test
 ```
-
----
 
 ## Primeiro uso, com a família
 

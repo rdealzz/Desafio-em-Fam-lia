@@ -28,3 +28,9 @@ ios/Runner/GoogleService-Info.plist
 
 # OS
 .DS_Store
+
+# Dados locais do Firebase Emulator Suite
+.emulator-data/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
