@@ -1,71 +1,75 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/app_theme.dart';
+import '../core/theme/palette.dart';
 import '../models/app_user.dart';
 
-/// Avatar circular do integrante, com anel de status do dia.
+/// Avatar do integrante com anel de status.
 ///
-/// Anel verde = já registrou atividade hoje. Cinza = ainda não.
+/// O anel só aparece cheio quem treinou hoje; quem não treinou fica com um
+/// traço apagado. Diferença de peso, não de cor berrante.
 class AvatarBubble extends StatelessWidget {
   const AvatarBubble({
     super.key,
     required this.user,
-    this.size = 60,
+    this.size = 48,
     this.showRing = true,
-    this.onTap,
   });
 
   final AppUser user;
   final double size;
   final bool showRing;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final active = user.isActiveToday;
-    final ringColor = active ? AppColors.success : const Color(0xFFD9D6E8);
+    final p = context.palette;
+    final ativo = user.isActiveToday;
+    final anel = ativo ? p.accent : p.border;
+    final temFoto = user.photoUrl != null && user.photoUrl!.isNotEmpty;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: showRing
-              ? Border.all(color: ringColor, width: 3)
-              : Border.all(color: Colors.transparent),
-        ),
-        child: ClipOval(
-          child: user.photoUrl != null && user.photoUrl!.isNotEmpty
-              ? Image.network(
-                  user.photoUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _EmojiAvatar(
-                    emoji: user.avatarEmoji,
-                    size: size,
-                  ),
-                )
-              : _EmojiAvatar(emoji: user.avatarEmoji, size: size),
-        ),
+    return Container(
+      width: size,
+      height: size,
+      padding: EdgeInsets.all(showRing ? 2.5 : 0),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: showRing
+            ? Border.all(color: anel, width: ativo ? 2 : 1.5)
+            : null,
+      ),
+      child: ClipOval(
+        child: temFoto
+            ? Image.network(
+                user.photoUrl!,
+                fit: BoxFit.cover,
+                // Decodifica no tamanho exibido em vez do tamanho original:
+                // menos memória e menos trabalho de GPU por quadro.
+                cacheWidth: (size * 3).round(),
+                errorBuilder: (_, __, ___) =>
+                    _Inicial(user: user, size: size, palette: p),
+              )
+            : _Inicial(user: user, size: size, palette: p),
       ),
     );
   }
 }
 
-class _EmojiAvatar extends StatelessWidget {
-  const _EmojiAvatar({required this.emoji, required this.size});
+class _Inicial extends StatelessWidget {
+  const _Inicial({required this.user, required this.size, required this.palette});
 
-  final String emoji;
+  final AppUser user;
   final double size;
+  final Palette palette;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.primary.withOpacity(0.10),
-      alignment: Alignment.center,
-      child: Text(emoji, style: TextStyle(fontSize: size * 0.45)),
+    return ColoredBox(
+      color: palette.surfaceSunken,
+      child: Center(
+        child: Text(
+          user.avatarEmoji,
+          style: TextStyle(fontSize: size * 0.42),
+        ),
+      ),
     );
   }
 }

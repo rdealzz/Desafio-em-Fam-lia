@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/join_family_screen.dart';
 import 'screens/shell/home_shell.dart';
@@ -30,6 +31,9 @@ class DesafioEmFamiliaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<ThemeController>(
+          create: (_) => ThemeController(),
+        ),
         Provider<FirestoreRefs>(
           create: (_) => FirestoreRefs(FirebaseFirestore.instance),
         ),
@@ -70,11 +74,17 @@ class DesafioEmFamiliaApp extends StatelessWidget {
           update: (_, __, ___, previous) => previous!,
         ),
       ],
-      child: MaterialApp(
-        title: 'Desafio em Família',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        home: const AuthGate(),
+      // `Consumer` em volta só do MaterialApp: trocar de tema reconstrói o
+      // app, mas não refaz os provedores de serviço acima.
+      child: Consumer<ThemeController>(
+        builder: (context, tema, _) => MaterialApp(
+          title: 'Desafio em Família',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: tema.mode,
+          home: const AuthGate(),
+        ),
       ),
     );
   }
@@ -107,21 +117,7 @@ class _SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('🏆', style: TextStyle(fontSize: 56)),
-            SizedBox(height: 20),
-            Text(
-              'Desafio em Família',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-            ),
-            SizedBox(height: 24),
-            CircularProgressIndicator(),
-          ],
-        ),
-      ),
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }

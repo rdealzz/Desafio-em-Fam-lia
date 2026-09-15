@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../../core/config/firebase_bootstrap.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/palette.dart';
+import '../../core/theme/tokens.dart';
 
 /// App mínimo mostrado quando o Firebase ainda não está ligado.
 ///
@@ -18,7 +20,8 @@ class FirebaseSetupApp extends StatelessWidget {
     return MaterialApp(
       title: 'Desafio em Família — configuração',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       home: FirebaseSetupScreen(startup: startup),
     );
   }
@@ -57,7 +60,7 @@ class FirebaseSetupScreen extends StatelessWidget {
                       'console do projeto.'
                   : 'O arquivo lib/firebase_options.dart ainda está com os '
                       'valores de exemplo. Escolha um dos caminhos abaixo.',
-              style: const TextStyle(color: AppColors.inkSoft, height: 1.45),
+              style: TextStyle(color: context.palette.textSecondary, height: 1.45),
             ),
 
             if (_isFailure && startup.detail.isNotEmpty) ...[
@@ -66,14 +69,14 @@ class FirebaseSetupScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.danger.withOpacity(0.10),
+                  color: context.palette.danger.withOpacity(0.10),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
                   startup.detail,
                   style: const TextStyle(
                     fontSize: 12.5,
-                    color: AppColors.danger,
+                    color: context.palette.danger,
                     height: 1.4,
                   ),
                 ),
@@ -105,7 +108,7 @@ class FirebaseSetupScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.07),
+                color: context.palette.accent.withOpacity(0.07),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Text(
@@ -116,7 +119,7 @@ class FirebaseSetupScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13.5,
                   height: 1.6,
-                  color: AppColors.primary,
+                  color: context.palette.accent,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -126,7 +129,7 @@ class FirebaseSetupScreen extends StatelessWidget {
             const Text(
               'Detalhes em docs/firebase_setup.md',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
+              style: TextStyle(fontSize: 12.5, color: context.palette.textSecondary),
             ),
           ],
         ),
@@ -156,7 +159,7 @@ class _SetupStep extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radius),
+        borderRadius: BorderRadius.circular(Radii.lg),
         border: Border.all(color: const Color(0xFFEFEDF7)),
       ),
       child: Column(
@@ -168,7 +171,7 @@ class _SetupStep extends StatelessWidget {
                 width: 30,
                 height: 30,
                 decoration: const BoxDecoration(
-                  color: AppColors.primary,
+                  color: context.palette.accent,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -189,7 +192,7 @@ class _SetupStep extends StatelessWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
-                    color: AppColors.ink,
+                    color: context.palette.textPrimary,
                   ),
                 ),
               ),
@@ -201,7 +204,7 @@ class _SetupStep extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13.5,
               height: 1.4,
-              color: AppColors.inkSoft,
+              color: context.palette.textSecondary,
             ),
           ),
           const SizedBox(height: 12),
@@ -216,7 +219,7 @@ class _SetupStep extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.ink,
+                color: context.palette.textPrimary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(

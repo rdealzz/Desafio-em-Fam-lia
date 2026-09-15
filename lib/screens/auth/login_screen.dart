@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../../core/theme/palette.dart';
+import '../../core/theme/tokens.dart';
 import '../../services/app_exception.dart';
 import '../../services/auth_service.dart';
 
@@ -69,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 6),
                 const Text(
                   'Um cofre de pontos, quatro pessoas, um prêmio por semana.',
-                  style: TextStyle(color: AppColors.inkSoft, height: 1.4),
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 28),
 
@@ -77,8 +78,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
+                    color: context.palette.surface,
+                    borderRadius: BorderRadius.circular(Radii.md),
                   ),
                   child: Row(
                     children: [
@@ -236,13 +237,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.danger.withOpacity(0.10),
+                      color: context.palette.surfaceRaised,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Text(
                       _error!,
-                      style: const TextStyle(
-                        color: AppColors.danger,
+                      style: TextStyle(
+                        color: context.palette.danger,
                         fontSize: 13.5,
                       ),
                     ),
@@ -349,7 +350,7 @@ class _ModeTab extends StatelessWidget {
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: selected ? AppColors.primary : Colors.transparent,
+            color: selected ? context.palette.accent : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
           ),
           alignment: Alignment.center,
@@ -357,7 +358,9 @@ class _ModeTab extends StatelessWidget {
             label,
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : AppColors.inkSoft,
+              color: selected
+                  ? context.palette.onAccent
+                  : context.palette.textSecondary,
             ),
           ),
         ),
@@ -386,10 +389,10 @@ class _ChoiceCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary.withOpacity(0.10) : Colors.white,
+          color: selected ? context.palette.accentSoft : context.palette.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? AppColors.primary : const Color(0xFFE7E5F2),
+            color: selected ? context.palette.accent : context.palette.border,
             width: selected ? 2 : 1,
           ),
         ),
@@ -447,13 +450,13 @@ class _AvatarPicker extends StatelessWidget {
                   width: 52,
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppColors.primary.withOpacity(0.12)
-                        : Colors.white,
+                        ? context.palette.accentSoft
+                        : context.palette.surface,
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isSelected
-                          ? AppColors.primary
-                          : const Color(0xFFE7E5F2),
+                          ? context.palette.accent
+                          : context.palette.border,
                       width: isSelected ? 2.5 : 1,
                     ),
                   ),

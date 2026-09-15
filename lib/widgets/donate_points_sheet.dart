@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../core/theme/app_theme.dart';
+import '../core/theme/palette.dart';
+import '../core/theme/tokens.dart';
 import '../core/utils/formatters.dart';
 import '../models/app_user.dart';
 import '../services/activity_service.dart';
@@ -9,20 +10,17 @@ import '../services/app_exception.dart';
 import '../services/points_calculator.dart';
 import '../state/session_controller.dart';
 import 'avatar_bubble.dart';
+import 'ui/pressable.dart';
+import 'ui/primitives.dart';
 
-/// Bottom sheet da Carta "Salva-Mãe / Salva-Pai".
-///
-/// Quem treinou dobrado escolhe para quem manda os pontos; quem recebe leva
-/// o DOBRO do que foi doado e mantém a sequência diária.
+/// Carta "Salva-Mãe / Salva-Pai": doar pontos, quem recebe leva o dobro.
 class DonatePointsSheet extends StatefulWidget {
   const DonatePointsSheet({super.key});
 
-  /// Abre o sheet. Retorna `true` se a doação foi concluída.
   static Future<bool?> show(BuildContext context) {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => const DonatePointsSheet(),
     );
   }
@@ -32,227 +30,157 @@ class DonatePointsSheet extends StatefulWidget {
 }
 
 class _DonatePointsSheetState extends State<DonatePointsSheet> {
-  AppUser? _recipient;
-  int _amount = 50;
-  bool _saving = false;
-  String? _error;
+  AppUser? _destino;
+  int _valor = 50;
+  bool _salvando = false;
+  String? _erro;
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
     final session = context.watch<SessionController>();
-    final me = session.user;
-    final others = session.otherMembers;
+    final eu = session.user;
+    final outros = session.otherMembers;
+    if (eu == null) return const SizedBox.shrink();
 
-    if (me == null) return const SizedBox.shrink();
-
-    final available = me.pointsThisWeek;
-    // Nunca deixar o botão oferecer mais do que a pessoa tem na semana.
-    final amount = _amount > available ? available : _amount;
+    final disponivel = eu.pointsThisWeek;
+    final valor = _valor > disponivel ? disponivel : _valor;
 
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: SingleChildScrollView(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Space.gutter,
+            Space.sm,
+            Space.gutter,
+            Space.xl,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE2E0EE),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              const Row(
-                children: [
-                  Text('🦸', style: TextStyle(fontSize: 26)),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Carta Salva-Mãe / Salva-Pai',
-                      style: TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
+              const SectionLabel('Carta Salva-Mãe / Salva-Pai'),
               Text(
-                'Você treinou em dobro? Doe pontos para salvar a sequência de '
-                'alguém. Quem recebe leva o DOBRO do que você doar.',
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.4,
-                  color: AppColors.inkSoft,
-                ),
+                'Treinou em dobro? Doe pontos para salvar a sequência de '
+                'alguém. Quem recebe leva o dobro do que você doar.',
+                style: t.bodyMedium,
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.07),
-                  borderRadius: BorderRadius.circular(16),
-                ),
+              const SizedBox(height: Space.lg),
+              Surface(
+                color: p.surfaceRaised,
+                padding: const EdgeInsets.all(Space.md),
                 child: Row(
                   children: [
-                    const Icon(Icons.style_outlined,
-                        color: AppColors.primary, size: 20),
-                    const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        'Cartas disponíveis: ${me.saveCards}  •  '
-                        'Seus pontos da semana: ${Formatters.points(available)}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
-                        ),
+                      child: StatBlock(
+                        value: '${eu.saveCards}',
+                        label: 'cartas',
+                      ),
+                    ),
+                    Expanded(
+                      child: StatBlock(
+                        value: Formatters.points(disponivel),
+                        label: 'pontos na semana',
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'Para quem?',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-              ),
-              const SizedBox(height: 10),
-              if (others.isEmpty)
-                const Text(
-                  'Ninguém mais entrou na família ainda.',
-                  style: TextStyle(color: AppColors.inkSoft),
-                )
+              const SizedBox(height: Space.xl),
+              const SectionLabel('Para quem'),
+              if (outros.isEmpty)
+                Text('Ninguém mais entrou na família ainda.', style: t.bodyMedium)
               else
                 Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: others.map((member) {
-                    final selected = _recipient?.id == member.id;
-                    return GestureDetector(
-                      onTap: () => setState(() => _recipient = member),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppColors.primary.withOpacity(0.10)
-                              : const Color(0xFFF6F5FB),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: selected
-                                ? AppColors.primary
-                                : Colors.transparent,
-                            width: 2,
+                  spacing: Space.sm,
+                  runSpacing: Space.sm,
+                  children: [
+                    for (final m in outros)
+                      SizedBox(
+                        width: 150,
+                        child: PressableCard(
+                          selected: _destino?.id == m.id,
+                          onTap: () => setState(() => _destino = m),
+                          padding: const EdgeInsets.all(Space.md),
+                          child: Row(
+                            children: [
+                              AvatarBubble(user: m, size: 30, showRing: false),
+                              const SizedBox(width: Space.sm),
+                              Expanded(
+                                child: Text(
+                                  m.firstName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: t.labelLarge,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AvatarBubble(
-                              user: member,
-                              size: 36,
-                              showRing: false,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              member.firstName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
-                    );
-                  }).toList(),
+                  ],
                 ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  const Text(
-                    'Quantos pontos doar?',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${Formatters.points(amount)} pts',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: Space.xl),
+              SectionLabel(
+                'Quanto doar',
+                trailing: Text(
+                  '${Formatters.points(valor)} pts',
+                  style: t.labelLarge?.copyWith(color: p.accent),
+                ),
               ),
               Slider(
-                value: amount.toDouble(),
+                value: valor.toDouble(),
                 min: 0,
-                max: available <= 0 ? 1 : available.toDouble(),
-                divisions: available >= 10 ? (available ~/ 10) : null,
-                label: '$amount pts',
-                onChanged: available <= 0
+                max: disponivel <= 0 ? 1 : disponivel.toDouble(),
+                divisions: disponivel >= 10 ? (disponivel ~/ 10) : null,
+                onChanged: disponivel <= 0
                     ? null
-                    : (value) => setState(() => _amount = value.round()),
+                    : (v) => setState(() => _valor = v.round()),
               ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(16),
-                ),
+              const SizedBox(height: Space.sm),
+              Surface(
+                color: p.accentSoft,
+                border: false,
                 child: Text(
-                  '${_recipient?.firstName ?? 'Quem receber'} vai ganhar '
-                  '${Formatters.points(PointsCalculator.donationValue(amount))} pts '
-                  '(o dobro) e manter a sequência do dia.',
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1B7F4C),
-                    height: 1.35,
-                  ),
+                  '${_destino?.firstName ?? 'Quem receber'} ganha '
+                  '${Formatters.points(PointsCalculator.donationValue(valor))} pts '
+                  'e mantém a sequência do dia.',
+                  style: t.bodyMedium?.copyWith(color: p.textPrimary),
                 ),
               ),
-              if (_error != null) ...[
-                const SizedBox(height: 12),
+              if (_erro != null) ...[
+                const SizedBox(height: Space.md),
                 Text(
-                  _error!,
-                  style: const TextStyle(color: AppColors.danger, fontSize: 13),
+                  _erro!,
+                  style: t.bodySmall?.copyWith(color: p.danger),
                 ),
               ],
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: _saving || _recipient == null || amount <= 0
+              const SizedBox(height: Space.lg),
+              Pressable(
+                onPressed: _salvando || _destino == null || valor <= 0
                     ? null
-                    : () => _submit(amount),
-                child: _saving
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
+                    : () => _enviar(valor),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: _salvando
+                    ? SizedBox(
+                        width: 19,
+                        height: 19,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
+                          strokeWidth: 2.2,
+                          color: p.onAccent,
                         ),
                       )
-                    : const Text('Usar a carta 🦸'),
+                    : const Text(
+                        'Usar a carta',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                        ),
+                      ),
               ),
             ],
           ),
@@ -261,46 +189,41 @@ class _DonatePointsSheetState extends State<DonatePointsSheet> {
     );
   }
 
-  Future<void> _submit(int amount) async {
+  Future<void> _enviar(int valor) async {
     final session = context.read<SessionController>();
-    final service = context.read<ActivityService>();
-    // Guardado antes do pop: depois de fechar o sheet este context não serve
-    // mais para achar o ScaffoldMessenger.
+    final servico = context.read<ActivityService>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    final me = session.user;
-    final recipient = _recipient;
-
-    if (me == null || recipient == null) return;
+    final eu = session.user;
+    final destino = _destino;
+    if (eu == null || destino == null) return;
 
     setState(() {
-      _saving = true;
-      _error = null;
+      _salvando = true;
+      _erro = null;
     });
 
     try {
-      final received = await service.donatePoints(
-        donor: me,
-        recipientId: recipient.id,
-        amount: amount,
+      final recebido = await servico.donatePoints(
+        donor: eu,
+        recipientId: destino.id,
+        amount: valor,
       );
-
       if (!mounted) return;
       navigator.pop(true);
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            '🦸 ${recipient.firstName} recebeu ${Formatters.points(received)} pts!',
+            '${destino.firstName} recebeu ${Formatters.points(recebido)} pts',
           ),
-          backgroundColor: AppColors.success,
         ),
       );
     } on AppException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _erro = e.message);
     } catch (_) {
-      setState(() => _error = 'Não foi possível doar agora. Tente de novo.');
+      setState(() => _erro = 'Não foi possível doar agora.');
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _salvando = false);
     }
   }
 }

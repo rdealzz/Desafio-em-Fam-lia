@@ -1,15 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/tokens.dart';
 import '../../services/activity_sync_service.dart';
 import '../../state/session_controller.dart';
 import '../activity/register_activity_screen.dart';
 import '../feed/feed_screen.dart';
 import '../home/home_screen.dart';
 
-/// Casca com a navegação inferior entre as 3 telas principais.
+/// Casca das três telas.
+///
+/// `PageView` em vez de `IndexedStack`: dá para **arrastar** entre as telas,
+/// que é como todo mundo já espera navegar no celular. `keepPage` mantém a
+/// rolagem de cada uma, e as três ficam vivas — trocar de aba não reconstrói
+/// nem refaz consulta.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -18,6 +25,7 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
+  final PageController _pager = PageController();
   int _index = 0;
   Timer? _syncTimer;
 
@@ -25,10 +33,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Ao abrir: tenta subir o que ficou parado da última vez sem internet.
     WidgetsBinding.instance.addPostFrameCallback((_) => _sincronizar());
-    // Enquanto o app está aberto: cobre o caso da internet voltar sozinha,
-    // sem ninguém tocar em nada.
     _syncTimer = Timer.periodic(
       const Duration(minutes: 2),
       (_) => _sincronizar(),
@@ -37,17 +42,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Voltou do bolso já no wi-fi de casa: momento mais provável de dar certo.
     if (state == AppLifecycleState.resumed) _sincronizar();
   }
 
   void _sincronizar() {
     if (!mounted) return;
     final sync = context.read<ActivitySyncService>();
-    if (!sync.hasPending && sync.pendingCount == 0) {
-      // Primeira chamada ainda não leu o disco; refresh resolve.
-      sync.refresh();
-    }
     final user = context.read<SessionController>().user;
     if (user != null) sync.drain(user);
   }
@@ -55,26 +55,32 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   @override
   void dispose() {
     _syncTimer?.cancel();
+    _pager.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  void _goTo(int index) => setState(() => _index = index);
+  void _irPara(int i) {
+    HapticFeedback.selectionClick();
+    _pager.animateToPage(i, duration: Motion.base, curve: Motion.enter);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _index,
+      body: PageView(
+        controller: _pager,
+        onPageChanged: (i) => setState(() => _index = i),
+        physics: const ClampingScrollPhysics(),
         children: [
-          HomeScreen(onRegisterActivity: () => _goTo(1)),
-          RegisterActivityScreen(onDone: () => _goTo(2)),
+          HomeScreen(onRegisterActivity: () => _irPara(1)),
+          RegisterActivityScreen(onDone: () => _irPara(2)),
           const FeedScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: _goTo,
+        onDestinationSelected: _irPara,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -82,8 +88,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
             label: 'A Casa',
           ),
           NavigationDestination(
-            icon: Icon(Icons.add_circle_outline),
-            selectedIcon: Icon(Icons.add_circle),
+            icon: Icon(Icons.add_circle_outline_rounded),
+            selectedIcon: Icon(Icons.add_circle_rounded),
             label: 'Registrar',
           ),
           NavigationDestination(

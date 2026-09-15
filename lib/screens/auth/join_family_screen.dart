@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../../core/theme/palette.dart';
+import '../../core/theme/tokens.dart';
 import '../../services/app_exception.dart';
 import '../../services/family_service.dart';
 import '../../state/session_controller.dart';
@@ -56,7 +57,7 @@ class _JoinFamilyScreenState extends State<JoinFamilyScreen> {
             const SizedBox(height: 6),
             const Text(
               'Crie a família ou entre com o código que alguém te mandou.',
-              style: TextStyle(color: AppColors.inkSoft, height: 1.4),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 28),
             TextField(
@@ -80,7 +81,7 @@ class _JoinFamilyScreenState extends State<JoinFamilyScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
                     'ou',
-                    style: TextStyle(color: AppColors.inkSoft),
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
                 const Expanded(child: Divider()),
@@ -104,7 +105,7 @@ class _JoinFamilyScreenState extends State<JoinFamilyScreen> {
               const SizedBox(height: 20),
               Text(
                 _error!,
-                style: const TextStyle(color: AppColors.danger),
+                style: TextStyle(color: context.palette.danger),
                 textAlign: TextAlign.center,
               ),
             ],

@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-import '../core/theme/app_theme.dart';
+import '../core/theme/palette.dart';
+import '../core/theme/tokens.dart';
 import '../core/utils/firestore_utils.dart';
 import '../core/utils/formatters.dart';
 import '../models/feed_post.dart';
+import 'ui/primitives.dart';
 
-/// Post do Mural do Deboche & Apoio: autor, foto, tempo, pontos e reações.
+/// Publicação do mural.
+///
+/// Foto em destaque, texto sóbrio, reações discretas. As cartas de brincadeira
+/// ganham uma faixa fina no topo em vez de contorno colorido no cartão inteiro
+/// — sinaliza o tipo sem transformar o feed num mostruário de cores.
 class FeedPostCard extends StatelessWidget {
   const FeedPostCard({
     super.key,
@@ -16,305 +23,268 @@ class FeedPostCard extends StatelessWidget {
 
   final FeedPost post;
   final String currentUserId;
-
-  /// Recebe a chave da reação (`fire`, `laugh`...) tocada.
   final ValueChanged<String> onReaction;
 
   @override
   Widget build(BuildContext context) {
-    final accent = _accentFor(post.type);
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final temFoto = post.photoUrl != null && post.photoUrl!.isNotEmpty;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radius),
-        border: Border.all(
-          color: post.isCard ? accent.withOpacity(0.4) : const Color(0xFFEFEDF7),
-          width: post.isCard ? 1.8 : 1,
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          color: p.surface,
+          borderRadius: BorderRadius.circular(Radii.lg),
+          border: Border.all(color: p.border),
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (post.isCard) _CardBanner(post: post, accent: accent),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 21,
-                  backgroundColor: accent.withOpacity(0.14),
-                  backgroundImage: (post.authorPhotoUrl?.isNotEmpty ?? false)
-                      ? NetworkImage(post.authorPhotoUrl!)
-                      : null,
-                  child: (post.authorPhotoUrl?.isNotEmpty ?? false)
-                      ? null
-                      : Text(
-                          post.authorAvatar,
-                          style: const TextStyle(fontSize: 20),
-                        ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.authorName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: AppColors.ink,
-                        ),
-                      ),
-                      Text(
-                        post.createdAt == null
-                            ? 'agora'
-                            : Formatters.timeAgo(post.createdAt!),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.inkSoft,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (post.points > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.10),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Text(
-                      '+${Formatters.points(post.points)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (post.message.isNotEmpty)
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (post.isCard) _Faixa(post: post),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-              child: Text(
-                post.message,
-                style: const TextStyle(fontSize: 15, height: 1.35),
+              padding: const EdgeInsets.fromLTRB(
+                Space.lg,
+                Space.md,
+                Space.lg,
+                0,
               ),
-            ),
-          if (post.durationMinutes > 0)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Wrap(
-                spacing: 8,
+              child: Row(
                 children: [
-                  _Chip(
-                    icon: Icons.timer_outlined,
-                    label: Formatters.duration(post.durationMinutes),
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: p.surfaceSunken,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      post.authorAvatar,
+                      style: const TextStyle(fontSize: 15),
+                    ),
                   ),
-                  if ((post.metadata['steps'] as num?) != null &&
-                      (post.metadata['steps'] as num) > 0)
-                    _Chip(
-                      icon: Icons.directions_walk,
-                      label: '${post.metadata['steps']} passos',
+                  const SizedBox(width: Space.md),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            post.authorName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: t.labelLarge,
+                          ),
+                        ),
+                        const SizedBox(width: Space.sm),
+                        Text(
+                          post.createdAt == null
+                              ? 'agora'
+                              : Formatters.timeAgo(post.createdAt!),
+                          style: t.bodySmall,
+                        ),
+                      ],
                     ),
-                  if ((post.metadata['streak'] as num?) != null &&
-                      (post.metadata['streak'] as num) > 1)
-                    _Chip(
-                      icon: Icons.local_fire_department,
-                      label: '${post.metadata['streak']} dias seguidos',
-                    ),
-                  // Registro que veio da fila offline aparece marcado, com a
-                  // hora real do exercício. Quem vê o mural entende que não
-                  // acabou de acontecer — e ninguém precisa perguntar.
-                  if (post.metadata['offlineSync'] == true)
-                    _Chip(
-                      icon: Icons.cloud_done_outlined,
-                      label: _offlineLabel(post),
+                  ),
+                  if (post.points > 0)
+                    Text(
+                      '+${Formatters.points(post.points)}',
+                      style: t.labelLarge?.copyWith(
+                        color: p.accent,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                 ],
               ),
             ),
-          if (post.photoUrl != null && post.photoUrl!.isNotEmpty)
-            AspectRatio(
-              aspectRatio: 4 / 3,
-              child: Image.network(
-                post.photoUrl!,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, progress) => progress == null
-                    ? child
-                    : const ColoredBox(
-                        color: Color(0xFFF1EFFA),
-                        child: Center(child: CircularProgressIndicator()),
+            if (post.message.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Space.lg,
+                  Space.md,
+                  Space.lg,
+                  0,
+                ),
+                child: Text(post.message, style: t.bodyLarge),
+              ),
+            if (post.durationMinutes > 0 || post.metadata['offlineSync'] == true)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Space.lg,
+                  Space.md,
+                  Space.lg,
+                  0,
+                ),
+                child: Wrap(
+                  spacing: Space.sm,
+                  runSpacing: Space.sm,
+                  children: [
+                    if (post.durationMinutes > 0)
+                      MetaChip(
+                        icon: Icons.schedule_rounded,
+                        label: Formatters.duration(post.durationMinutes),
                       ),
-                errorBuilder: (_, __, ___) => const ColoredBox(
-                  color: Color(0xFFF1EFFA),
-                  child: Center(child: Icon(Icons.broken_image_outlined)),
+                    if (_num(post.metadata['steps']) > 0)
+                      MetaChip(
+                        icon: Icons.directions_walk_rounded,
+                        label: '${_num(post.metadata['steps'])} passos',
+                      ),
+                    if (_num(post.metadata['streak']) > 1)
+                      MetaChip(
+                        icon: Icons.bolt_rounded,
+                        label: '${_num(post.metadata['streak'])} dias',
+                      ),
+                    if (post.metadata['offlineSync'] == true)
+                      MetaChip(
+                        icon: Icons.cloud_done_outlined,
+                        label: _rotuloOffline(post),
+                      ),
+                  ],
                 ),
               ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-            child: Row(
-              children: Reactions.available.entries.map((entry) {
-                final reacted = post.hasReacted(entry.key, currentUserId);
-                final count = post.reactionCount(entry.key);
-
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: InkWell(
-                    onTap: () => onReaction(entry.key),
-                    borderRadius: BorderRadius.circular(30),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: reacted
-                            ? AppColors.primary.withOpacity(0.12)
-                            : const Color(0xFFF6F5FB),
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                          color: reacted
-                              ? AppColors.primary.withOpacity(0.5)
-                              : Colors.transparent,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(entry.value,
-                              style: const TextStyle(fontSize: 15)),
-                          if (count > 0) ...[
-                            const SizedBox(width: 4),
-                            Text(
-                              '$count',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: reacted
-                                    ? AppColors.primary
-                                    : AppColors.inkSoft,
-                              ),
-                            ),
-                          ],
-                        ],
+            if (temFoto) ...[
+              const SizedBox(height: Space.md),
+              AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Image.network(
+                  post.photoUrl!,
+                  fit: BoxFit.cover,
+                  // Decodifica em ~2x a largura de tela, não no tamanho
+                  // original da câmera: corta memória e trabalho de GPU.
+                  cacheWidth: 900,
+                  loadingBuilder: (context, child, progress) => progress == null
+                      ? child
+                      : ColoredBox(color: p.surfaceSunken),
+                  errorBuilder: (_, __, ___) =>
+                      ColoredBox(color: p.surfaceSunken),
+                ),
+              ),
+            ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.md,
+                Space.md,
+                Space.md,
+                Space.md,
+              ),
+              child: Row(
+                children: [
+                  for (final e in Reactions.available.entries)
+                    Padding(
+                      padding: const EdgeInsets.only(right: Space.sm),
+                      child: _Reacao(
+                        emoji: e.value,
+                        count: post.reactionCount(e.key),
+                        ativa: post.hasReacted(e.key, currentUserId),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          onReaction(e.key);
+                        },
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  /// "feito ontem" / "feito há 3 h" — a hora que vale é a do exercício.
-  static String _offlineLabel(FeedPost post) {
-    final raw = post.metadata['performedAt'];
-    final performedAt = FirestoreUtils.toDateTime(raw);
-    if (performedAt == null) return 'registrado offline';
-    return 'feito ${Formatters.timeAgo(performedAt)}';
-  }
+  static int _num(Object? v) => v is num ? v.toInt() : 0;
 
-  static Color _accentFor(FeedPostType type) {
-    switch (type) {
-      case FeedPostType.saveCard:
-        return AppColors.primary;
-      case FeedPostType.impossibleChallenge:
-        return AppColors.danger;
-      case FeedPostType.punishment:
-        return AppColors.warning;
-      case FeedPostType.rewardUnlocked:
-        return AppColors.success;
-      case FeedPostType.activity:
-      case FeedPostType.system:
-        return AppColors.primary;
-    }
+  static String _rotuloOffline(FeedPost post) {
+    final at = FirestoreUtils.toDateTime(post.metadata['performedAt']);
+    return at == null ? 'offline' : 'feito ${Formatters.timeAgo(at)}';
   }
 }
 
-/// Faixa que identifica a carta de brincadeira no topo do post.
-class _CardBanner extends StatelessWidget {
-  const _CardBanner({required this.post, required this.accent});
+class _Reacao extends StatelessWidget {
+  const _Reacao({
+    required this.emoji,
+    required this.count,
+    required this.ativa,
+    required this.onTap,
+  });
+
+  final String emoji;
+  final int count;
+  final bool ativa;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: Motion.fast,
+        padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: 6),
+        decoration: BoxDecoration(
+          color: ativa ? p.accentSoft : p.surfaceSunken,
+          borderRadius: BorderRadius.circular(Radii.sm),
+          border: Border.all(
+            color: ativa ? p.accent : Colors.transparent,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 13)),
+            if (count > 0) ...[
+              const SizedBox(width: 4),
+              Text(
+                '$count',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ativa ? p.accent : p.textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Faixa extends StatelessWidget {
+  const _Faixa({required this.post});
 
   final FeedPost post;
-  final Color accent;
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    final cor = switch (post.type) {
+      FeedPostType.impossibleChallenge => p.warning,
+      FeedPostType.punishment => p.danger,
+      _ => p.accent,
+    };
+
     return Container(
       width: double.infinity,
-      color: accent.withOpacity(0.12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-      child: Row(
-        children: [
-          Text(post.type.emoji, style: const TextStyle(fontSize: 15)),
-          const SizedBox(width: 8),
-          Text(
-            _labelFor(post.type),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.4,
-              color: accent,
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.lg,
+        vertical: Space.sm,
       ),
-    );
-  }
-
-  static String _labelFor(FeedPostType type) {
-    switch (type) {
-      case FeedPostType.saveCard:
-        return 'CARTA SALVA-MÃE/PAI';
-      case FeedPostType.impossibleChallenge:
-        return 'DESAFIO IMPOSSÍVEL';
-      case FeedPostType.punishment:
-        return 'PUNIÇÃO LEVE — PAGANDO MICO';
-      default:
-        return 'AVISO';
-    }
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F5FB),
-        borderRadius: BorderRadius.circular(30),
+        border: Border(top: BorderSide(color: cor, width: 2)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppColors.inkSoft),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: AppColors.inkSoft),
-          ),
-        ],
+      child: Text(
+        switch (post.type) {
+          FeedPostType.saveCard => 'CARTA SALVA-MÃE/PAI',
+          FeedPostType.impossibleChallenge => 'DESAFIO IMPOSSÍVEL',
+          FeedPostType.punishment => 'PUNIÇÃO LEVE',
+          _ => 'AVISO',
+        },
+        style: Theme.of(context)
+            .textTheme
+            .labelMedium
+            ?.copyWith(color: cor, fontWeight: FontWeight.w800),
       ),
     );
   }

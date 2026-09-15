@@ -1,131 +1,249 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-/// Identidade visual do app: cores quentes de família, cantos bem arredondados
-/// e alvos de toque grandes (a mãe e o pai precisam acertar de primeira).
-class AppColors {
-  const AppColors._();
+import 'palette.dart';
+import 'tokens.dart';
 
-  static const Color primary = Color(0xFF6C4DF6); // roxo do cofre
-  static const Color secondary = Color(0xFFFF8A3D); // laranja do incentivo
-  static const Color success = Color(0xFF2ECC71);
-  static const Color warning = Color(0xFFFFC542);
-  static const Color danger = Color(0xFFE85C5C);
-  static const Color surface = Color(0xFFF6F5FB);
-  static const Color ink = Color(0xFF1C1B2E);
-  static const Color inkSoft = Color(0xFF6E6B8A);
-
-  /// Cor por GRUPO de atividade, não por modalidade.
-  ///
-  /// Com sete modalidades, sete cores de identidade reprovam no validador de
-  /// daltonismo: a pior dupla fica a ΔE 1,1 em deuteranopia — indistinguível.
-  /// Três cores de grupo passam em todos os pares (pior: ΔE 7,7 CVD e 15,1
-  /// visão normal), e a cor passa a dizer algo útil — onde o treino acontece.
-  ///
-  /// O 7,7 está na faixa que só vale com codificação secundária, e ela existe:
-  /// toda modalidade aparece sempre com emoji e rótulo, nunca cor sozinha.
-  ///
-  /// Validado com scripts/validate_palette.js da skill dataviz, critério
-  /// --pairs all (as modalidades aparecem todas juntas na grade).
-  static const Map<String, Color> activityGroup = {
-    'outdoor': Color(0xFF3DA5FF), // azul
-    'training': Color(0xFFF08C00), // laranja
-    'home': Color(0xFFB15BD8), // roxo
-  };
-
-  static const LinearGradient vaultGradient = LinearGradient(
-    colors: [Color(0xFF6C4DF6), Color(0xFF9B6BFF)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-}
-
+/// Tema do app nos dois modos.
+///
+/// A escala tipográfica tem poucos degraus e bastante contraste entre eles —
+/// é o que separa uma interface que parece projetada de uma que parece
+/// montada. Números de estatística usam figuras tabulares: sem isso, o total
+/// do cofre "dança" a cada atualização porque cada dígito tem largura própria.
 class AppTheme {
   const AppTheme._();
 
-  static const double radius = 24;
+  static const String fontFamily = 'Inter';
 
-  static ThemeData get light {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      primary: AppColors.primary,
-      secondary: AppColors.secondary,
-      brightness: Brightness.light,
+  /// Dígitos de largura fixa. Essencial em número que muda ao vivo.
+  static const List<FontFeature> tabular = [FontFeature.tabularFigures()];
+
+  static ThemeData dark() => _build(Palette.dark);
+  static ThemeData light() => _build(Palette.light);
+
+  static ThemeData _build(Palette p) {
+    final scheme = ColorScheme(
+      brightness: p.isDark ? Brightness.dark : Brightness.light,
+      primary: p.accent,
+      onPrimary: p.onAccent,
+      secondary: p.accent,
+      onSecondary: p.onAccent,
+      error: p.danger,
+      onError: p.isDark ? const Color(0xFF14141A) : Colors.white,
+      surface: p.surface,
+      onSurface: p.textPrimary,
     );
+
+    final text = _textTheme(p);
 
     return ThemeData(
       useMaterial3: true,
+      brightness: scheme.brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor: AppColors.surface,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
+      scaffoldBackgroundColor: p.bg,
+      canvasColor: p.bg,
+      fontFamily: fontFamily,
+      textTheme: text,
+      extensions: [p],
+
+      // Respingo de toque some: o retorno tátil vem do próprio botão afundando,
+      // e a onda do Material por cima só suja a animação.
+      splashFactory: NoSplash.splashFactory,
+      highlightColor: Colors.transparent,
+      splashColor: Colors.transparent,
+
+      appBarTheme: AppBarTheme(
+        backgroundColor: p.bg,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
-        foregroundColor: AppColors.ink,
+        foregroundColor: p.textPrimary,
+        titleTextStyle: text.titleMedium,
+        systemOverlayStyle: p.isDark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
       ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(60),
-          textStyle: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(54),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        ),
-      ),
+
+      dividerTheme: DividerThemeData(color: p.border, thickness: 1, space: 1),
+
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        fillColor: p.surfaceSunken,
+        hintStyle: text.bodyMedium?.copyWith(color: p.textMuted),
+        labelStyle: text.bodyMedium?.copyWith(color: p.textSecondary),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: Space.lg,
+          vertical: Space.lg,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(Radii.md),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Color(0xFFE7E5F2)),
+          borderRadius: BorderRadius.circular(Radii.md),
+          borderSide: BorderSide(color: p.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderRadius: BorderRadius.circular(Radii.md),
+          borderSide: BorderSide(color: p.accent, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+          borderSide: BorderSide(color: p.danger),
         ),
       ),
+
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: Colors.white,
-        indicatorColor: AppColors.primary.withOpacity(0.12),
-        height: 72,
+        backgroundColor: p.surface,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: p.accentSoft,
+        elevation: 0,
+        height: 66,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        labelTextStyle: WidgetStatePropertyAll(
+          text.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            size: 22,
+            color: states.contains(WidgetState.selected)
+                ? p.accent
+                : p.textMuted,
+          ),
+        ),
       ),
+
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: p.surface,
+        surfaceTintColor: Colors.transparent,
+        modalBarrierColor: p.isDark ? const Color(0xCC000000) : const Color(0x66000000),
+        shape: const RoundedRectangleBorder(borderRadius: Radii.sheet),
+        showDragHandle: true,
+        dragHandleColor: p.borderStrong,
+      ),
+
+      dialogTheme: DialogThemeData(
+        backgroundColor: p.surfaceRaised,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.xl),
+        ),
+      ),
+
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
+        backgroundColor: p.surfaceRaised,
+        contentTextStyle: text.bodyMedium?.copyWith(color: p.textPrimary),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(Radii.md),
         ),
       ),
-      textTheme: const TextTheme(
-        headlineMedium: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.w800,
-          color: AppColors.ink,
+
+      sliderTheme: SliderThemeData(
+        activeTrackColor: p.accent,
+        inactiveTrackColor: p.surfaceSunken,
+        thumbColor: p.accent,
+        overlayColor: p.accentSoft,
+        trackHeight: 4,
+      ),
+
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: p.accent,
+          textStyle: text.labelLarge,
         ),
-        titleLarge: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          color: AppColors.ink,
-        ),
-        bodyMedium: TextStyle(fontSize: 15, color: AppColors.ink),
-        bodySmall: TextStyle(fontSize: 13, color: AppColors.inkSoft),
+      ),
+
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: p.accent,
+        linearTrackColor: p.surfaceSunken,
+        circularTrackColor: p.surfaceSunken,
+      ),
+
+      iconTheme: IconThemeData(color: p.textSecondary, size: 22),
+    );
+  }
+
+  static TextTheme _textTheme(Palette p) {
+    return TextTheme(
+      // Número gigante de estatística: o dado é o herói da tela.
+      displayLarge: TextStyle(
+        fontSize: 52,
+        height: 1.0,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -2.0,
+        color: p.textPrimary,
+        fontFeatures: tabular,
+      ),
+      displayMedium: TextStyle(
+        fontSize: 36,
+        height: 1.05,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -1.2,
+        color: p.textPrimary,
+        fontFeatures: tabular,
+      ),
+      headlineMedium: TextStyle(
+        fontSize: 26,
+        height: 1.15,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.7,
+        color: p.textPrimary,
+      ),
+      titleLarge: TextStyle(
+        fontSize: 19,
+        height: 1.25,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.35,
+        color: p.textPrimary,
+      ),
+      titleMedium: TextStyle(
+        fontSize: 16,
+        height: 1.3,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.2,
+        color: p.textPrimary,
+      ),
+      bodyLarge: TextStyle(
+        fontSize: 15.5,
+        height: 1.45,
+        fontWeight: FontWeight.w400,
+        color: p.textPrimary,
+      ),
+      bodyMedium: TextStyle(
+        fontSize: 14,
+        height: 1.45,
+        fontWeight: FontWeight.w400,
+        color: p.textSecondary,
+      ),
+      bodySmall: TextStyle(
+        fontSize: 12.5,
+        height: 1.4,
+        fontWeight: FontWeight.w400,
+        color: p.textMuted,
+      ),
+      labelLarge: TextStyle(
+        fontSize: 15,
+        height: 1.2,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.1,
+        color: p.textPrimary,
+      ),
+      // Rótulo de seção: caixa alta, espaçada, pequena. Sinaliza estrutura
+      // sem competir com o conteúdo.
+      labelMedium: TextStyle(
+        fontSize: 11.5,
+        height: 1.2,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.9,
+        color: p.textMuted,
+      ),
+      labelSmall: TextStyle(
+        fontSize: 11,
+        height: 1.2,
+        fontWeight: FontWeight.w600,
+        color: p.textSecondary,
       ),
     );
   }

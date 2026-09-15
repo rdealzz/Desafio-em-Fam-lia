@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/app_theme.dart';
+import '../core/theme/palette.dart';
+import '../core/theme/tokens.dart';
 import '../core/utils/formatters.dart';
 import '../models/app_user.dart';
 import 'avatar_bubble.dart';
+import 'ui/primitives.dart';
 
-/// Faixa com os 4 integrantes e o status de cada um no dia.
+/// Os integrantes em lista vertical compacta, com a fatia de cada um.
 ///
-/// Ex.: "Mãe — Já fez a caminhada!" / "Pai — ainda não treinou hoje".
+/// Virou lista em vez de carrossel de cartões: com quatro pessoas, rolar na
+/// horizontal escondia gente. Vertical mostra todo mundo de uma vez e dá para
+/// comparar as barras lado a lado.
 class MemberStatusRow extends StatelessWidget {
   const MemberStatusRow({
     super.key,
@@ -21,107 +25,109 @@ class MemberStatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (members.isEmpty) {
-      return const _EmptyMembers();
+      return Surface(
+        child: Text(
+          'Convide os outros integrantes para começar.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
     }
 
-    return SizedBox(
-      height: 132,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        itemCount: members.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final member = members[index];
-          return _MemberTile(
-            member: member,
-            onTap: onMemberTap == null ? null : () => onMemberTap!(member),
-          );
-        },
+    final maior = members
+        .map((m) => m.pointsThisWeek)
+        .fold<int>(1, (a, b) => b > a ? b : a);
+
+    return Surface(
+      padding: const EdgeInsets.symmetric(vertical: Space.xs),
+      child: Column(
+        children: [
+          for (var i = 0; i < members.length; i++) ...[
+            if (i > 0) const Divider(height: 1, indent: Space.lg, endIndent: Space.lg),
+            _Linha(
+              member: members[i],
+              fracao: members[i].pointsThisWeek / maior,
+              onTap: onMemberTap == null
+                  ? null
+                  : () => onMemberTap!(members[i]),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
-class _MemberTile extends StatelessWidget {
-  const _MemberTile({required this.member, this.onTap});
+class _Linha extends StatelessWidget {
+  const _Linha({required this.member, required this.fracao, this.onTap});
 
   final AppUser member;
+  final double fracao;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final active = member.isActiveToday;
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final ativo = member.isActiveToday;
 
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        width: 108,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: active
-                ? AppColors.success.withOpacity(0.35)
-                : const Color(0xFFEFEDF7),
-          ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.lg,
+          vertical: Space.md,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            AvatarBubble(user: member, size: 54),
-            const SizedBox(height: 8),
-            Text(
-              member.firstName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: AppColors.ink,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '${Formatters.points(member.pointsThisWeek)} pts',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              active ? '✅ treinou hoje' : '⏳ ainda não',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                color: active ? AppColors.success : AppColors.inkSoft,
+            AvatarBubble(user: member, size: 40),
+            const SizedBox(width: Space.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          member.firstName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: t.labelLarge,
+                        ),
+                      ),
+                      Text(
+                        Formatters.points(member.pointsThisWeek),
+                        style: t.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: ativo ? p.accent : p.textSecondary,
+                          fontFeatures: const [],
+                        ),
+                      ),
+                      Text(' pts', style: t.bodySmall),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ProgressBarThin(
+                    value: fracao,
+                    height: 4,
+                    color: ativo ? p.accent : p.borderStrong,
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    ativo
+                        ? (member.statusMessage.isNotEmpty
+                            ? member.statusMessage
+                            : 'treinou hoje')
+                        : 'ainda não treinou hoje',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: t.bodySmall,
+                  ),
+                ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _EmptyMembers extends StatelessWidget {
-  const _EmptyMembers();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Text(
-        'Convide os outros 3 integrantes para começar 👨‍👩‍👦',
-        style: TextStyle(color: AppColors.inkSoft),
       ),
     );
   }

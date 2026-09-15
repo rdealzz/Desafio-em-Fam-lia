@@ -2,26 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../../core/theme/palette.dart';
+import '../../core/theme/theme_controller.dart';
+import '../../core/theme/tokens.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/feed_post.dart';
 import '../../state/session_controller.dart';
-import '../profile/member_profile_screen.dart';
 import '../../widgets/donate_points_sheet.dart';
 import '../../widgets/member_status_row.dart';
 import '../../widgets/pending_sync_banner.dart';
 import '../../widgets/publish_card_sheet.dart';
 import '../../widgets/rewards_section.dart';
+import '../../widgets/ui/pressable.dart';
+import '../../widgets/ui/primitives.dart';
 import '../../widgets/vault_progress_card.dart';
+import '../profile/member_profile_screen.dart';
 
-/// TELA 1 — Dashboard "A Casa".
-///
-/// Tudo que a família precisa ver de relance: o cofre da semana, quem já
-/// treinou hoje, o botão grande de registrar e os prêmios desbloqueados.
+/// TELA 1 — A Casa.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key, this.onRegisterActivity});
 
-  /// Leva para a Tela 2 (a casca controla a navegação).
   final VoidCallback? onRegisterActivity;
 
   @override
@@ -29,6 +29,8 @@ class HomeScreen extends StatelessWidget {
     final session = context.watch<SessionController>();
     final family = session.family;
     final user = session.user;
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
 
     if (family == null || user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -36,99 +38,204 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: RefreshIndicator(
-          // Os dados já chegam por stream; o gesto serve de conforto visual.
-          onRefresh: () async =>
-              Future<void>.delayed(const Duration(milliseconds: 400)),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-            children: [
-              // Cabeçalho
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Olá, ${user.firstName}! 👋',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          family.name,
-                          style: const TextStyle(
-                            color: AppColors.inkSoft,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            Space.gutter,
+            Space.md,
+            Space.gutter,
+            Space.huge,
+          ),
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(family.name.toUpperCase(), style: t.labelMedium),
+                      const SizedBox(height: 2),
+                      Text('Olá, ${user.firstName}', style: t.headlineMedium),
+                    ],
                   ),
-                  _StreakBadge(streak: user.currentStreak),
-                  const SizedBox(width: 6),
-                  IconButton(
-                    tooltip: 'Convite e configurações',
-                    icon: const Icon(Icons.more_vert),
-                    onPressed: () => _openMenu(context),
+                ),
+                if (user.currentStreak > 0) _Sequencia(dias: user.currentStreak),
+                const SizedBox(width: Space.sm),
+                _BotaoIcone(
+                  icon: context.read<ThemeController>().isDark(context)
+                      ? Icons.light_mode_outlined
+                      : Icons.dark_mode_outlined,
+                  tooltip: 'Alternar tema',
+                  onTap: () =>
+                      context.read<ThemeController>().alternar(context),
+                ),
+                const SizedBox(width: Space.sm),
+                _BotaoIcone(
+                  icon: Icons.more_horiz_rounded,
+                  tooltip: 'Convite e conta',
+                  onTap: () => _menu(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: Space.xl),
+
+            const PendingSyncBanner(),
+            VaultProgressCard(family: family),
+            const SizedBox(height: Space.lg),
+
+            Pressable(
+              onPressed: onRegisterActivity,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add_rounded, size: 21),
+                  SizedBox(width: Space.sm),
+                  Text(
+                    'Registrar atividade',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+            ),
+            const SizedBox(height: Space.xxl),
 
-              const PendingSyncBanner(),
+            SectionLabel(
+              'A turma esta semana',
+              trailing: Text('${family.memberIds.length}/4', style: t.bodySmall),
+            ),
+            MemberStatusRow(
+              members: session.members,
+              onMemberTap: (m) => MemberProfileScreen.open(context, m.id),
+            ),
+            const SizedBox(height: Space.xxl),
 
-              VaultProgressCard(family: family),
-              const SizedBox(height: 24),
+            SectionLabel(
+              'Prêmios',
+              trailing: Text(
+                '${family.unlockedRewards.length} liberados',
+                style: t.bodySmall,
+              ),
+            ),
+            RewardsSection(
+              rewards: family.rewards,
+              vaultPoints: family.vaultPoints,
+            ),
+            const SizedBox(height: Space.xxl),
 
-              // Botão principal — grande e impossível de não ver.
-              FilledButton.icon(
-                onPressed: onRegisterActivity,
-                icon: const Icon(Icons.add_circle_outline, size: 26),
-                label: const Text('Registrar Atividade'),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(66),
-                  backgroundColor: AppColors.secondary,
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+            const SectionLabel('Cartas'),
+            _Cartas(saveCards: user.saveCards),
+            const SizedBox(height: Space.xl),
+
+            Surface(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: StatBlock(
+                      value: Formatters.points(user.pointsThisWeek),
+                      label: 'meus pontos',
+                      accent: true,
+                    ),
                   ),
+                  Container(width: 1, height: 30, color: p.border),
+                  const SizedBox(width: Space.lg),
+                  Expanded(
+                    child: StatBlock(
+                      value: family.vaultPoints == 0
+                          ? '0%'
+                          : '${((user.pointsThisWeek / family.vaultPoints) * 100).round()}%',
+                      label: 'do cofre',
+                    ),
+                  ),
+                  Container(width: 1, height: 30, color: p.border),
+                  const SizedBox(width: Space.lg),
+                  Expanded(
+                    child: StatBlock(
+                      value: '${user.longestStreak}',
+                      suffix: 'd',
+                      label: 'melhor sequência',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _menu(BuildContext context) {
+    final session = context.read<SessionController>();
+    final tema = context.read<ThemeController>();
+    final family = session.family;
+
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Space.gutter,
+            Space.sm,
+            Space.gutter,
+            Space.xl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SectionLabel('Código do convite'),
+              Pressable(
+                tone: PressableTone.ghost,
+                onPressed: () {
+                  Clipboard.setData(
+                    ClipboardData(text: family?.inviteCode ?? ''),
+                  );
+                  Navigator.of(sheet).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Código copiado')),
+                  );
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      family?.inviteCode ?? '------',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            letterSpacing: 5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(width: Space.md),
+                    const Icon(Icons.copy_rounded, size: 17),
+                  ],
                 ),
               ),
-              const SizedBox(height: 26),
-
-              _SectionTitle(
-                title: 'A turma hoje',
-                trailing: '${family.memberIds.length}/4',
+              const SizedBox(height: Space.xl),
+              const SectionLabel('Aparência'),
+              _SeletorTema(controller: tema),
+              const SizedBox(height: Space.xl),
+              Pressable(
+                tone: PressableTone.ghost,
+                onPressed: () {
+                  final id = session.user?.id;
+                  Navigator.of(sheet).pop();
+                  if (id != null) MemberProfileScreen.open(context, id);
+                },
+                child: const Text('Meu progresso'),
               ),
-              const SizedBox(height: 12),
-              MemberStatusRow(
-                members: session.members,
-                onMemberTap: (member) =>
-                    MemberProfileScreen.open(context, member.id),
-              ),
-              const SizedBox(height: 26),
-
-              _SectionTitle(
-                title: 'Prêmios do fim de semana',
-                trailing: '${family.unlockedRewards.length} liberados',
-              ),
-              const SizedBox(height: 12),
-              RewardsSection(
-                rewards: family.rewards,
-                vaultPoints: family.vaultPoints,
-              ),
-              const SizedBox(height: 26),
-
-              const _SectionTitle(title: 'Cartas de brincadeira'),
-              const SizedBox(height: 12),
-              _CardsRow(saveCards: user.saveCards),
-              const SizedBox(height: 20),
-
-              _WeekSummary(
-                myPoints: user.pointsThisWeek,
-                vaultPoints: family.vaultPoints,
-                longestStreak: user.longestStreak,
+              const SizedBox(height: Space.md),
+              Pressable(
+                tone: PressableTone.ghost,
+                onPressed: () {
+                  Navigator.of(sheet).pop();
+                  session.signOut();
+                },
+                child: const Text('Sair da conta'),
               ),
             ],
           ),
@@ -136,152 +243,105 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  void _openMenu(BuildContext context) {
-    final session = context.read<SessionController>();
-    final family = session.family;
+class _SeletorTema extends StatelessWidget {
+  const _SeletorTema({required this.controller});
 
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => Container(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Convide a família',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Quem tiver este código entra no mesmo cofre (até 4 pessoas).',
-              style: TextStyle(color: AppColors.inkSoft, fontSize: 13.5),
-            ),
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () {
-                Clipboard.setData(
-                  ClipboardData(text: family?.inviteCode ?? ''),
-                );
-                Navigator.of(sheetContext).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Código copiado!')),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      family?.inviteCode ?? '------',
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 6,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Icon(Icons.copy_rounded,
-                        color: AppColors.primary, size: 20),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 22),
-            OutlinedButton.icon(
-              onPressed: () {
-                final myId = session.user?.id;
-                Navigator.of(sheetContext).pop();
-                if (myId != null) MemberProfileScreen.open(context, myId);
-              },
-              icon: const Icon(Icons.timeline),
-              label: const Text('Meu progresso'),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(sheetContext).pop();
-                session.signOut();
-              },
-              icon: const Icon(Icons.logout),
-              label: const Text('Sair da conta'),
-            ),
-          ],
+  final ThemeController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) => SegmentedButton<ThemeMode>(
+        segments: const [
+          ButtonSegment(
+            value: ThemeMode.light,
+            icon: Icon(Icons.light_mode_outlined, size: 17),
+            label: Text('Claro'),
+          ),
+          ButtonSegment(
+            value: ThemeMode.system,
+            icon: Icon(Icons.brightness_auto_outlined, size: 17),
+            label: Text('Auto'),
+          ),
+          ButtonSegment(
+            value: ThemeMode.dark,
+            icon: Icon(Icons.dark_mode_outlined, size: 17),
+            label: Text('Escuro'),
+          ),
+        ],
+        selected: {controller.mode},
+        showSelectedIcon: false,
+        onSelectionChanged: (s) => controller.definir(s.first),
+      ),
+    );
+  }
+}
+
+class _BotaoIcone extends StatelessWidget {
+  const _BotaoIcone({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: p.surface,
+            borderRadius: BorderRadius.circular(Radii.sm),
+            border: Border.all(color: p.border),
+          ),
+          child: Icon(icon, size: 18, color: p.textSecondary),
         ),
       ),
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, this.trailing});
+class _Sequencia extends StatelessWidget {
+  const _Sequencia({required this.dias});
 
-  final String title;
-  final String? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-        ),
-        if (trailing != null)
-          Text(
-            trailing!,
-            style: const TextStyle(
-              color: AppColors.inkSoft,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _StreakBadge extends StatelessWidget {
-  const _StreakBadge({required this.streak});
-
-  final int streak;
+  final int dias;
 
   @override
   Widget build(BuildContext context) {
-    if (streak <= 0) return const SizedBox.shrink();
-
+    final p = context.palette;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.secondary.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(30),
+        color: p.accentSoft,
+        borderRadius: BorderRadius.circular(Radii.sm),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.local_fire_department,
-              color: AppColors.secondary, size: 18),
-          const SizedBox(width: 4),
+          Icon(Icons.bolt_rounded, size: 15, color: p.accent),
+          const SizedBox(width: 3),
           Text(
-            '$streak',
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              color: AppColors.secondary,
-            ),
+            '$dias',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: p.accent,
+                  fontWeight: FontWeight.w800,
+                ),
           ),
         ],
       ),
@@ -289,9 +349,8 @@ class _StreakBadge extends StatelessWidget {
   }
 }
 
-/// Atalhos para as três cartas de gamificação.
-class _CardsRow extends StatelessWidget {
-  const _CardsRow({required this.saveCards});
+class _Cartas extends StatelessWidget {
+  const _Cartas({required this.saveCards});
 
   final int saveCards;
 
@@ -300,37 +359,32 @@ class _CardsRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _GameCard(
-            emoji: '🦸',
+          child: _Carta(
+            icon: Icons.volunteer_activism_outlined,
             title: 'Salva-Mãe/Pai',
-            subtitle: saveCards > 0
-                ? '$saveCards disponível'
-                : 'usada nesta semana',
-            color: AppColors.primary,
+            sub: saveCards > 0 ? '$saveCards disponível' : 'usada',
             enabled: saveCards > 0,
             onTap: () => DonatePointsSheet.show(context),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: Space.md),
         Expanded(
-          child: _GameCard(
-            emoji: '🔥',
+          child: _Carta(
+            icon: Icons.local_fire_department_outlined,
             title: 'Desafio',
-            subtitle: 'lançar agora',
-            color: AppColors.danger,
+            sub: 'lançar',
             onTap: () => PublishCardSheet.show(
               context,
               FeedPostType.impossibleChallenge,
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: Space.md),
         Expanded(
-          child: _GameCard(
-            emoji: '🤡',
+          child: _Carta(
+            icon: Icons.theater_comedy_outlined,
             title: 'Punição',
-            subtitle: 'mico de domingo',
-            color: AppColors.warning,
+            sub: 'mico',
             onTap: () =>
                 PublishCardSheet.show(context, FeedPostType.punishment),
           ),
@@ -340,148 +394,50 @@ class _CardsRow extends StatelessWidget {
   }
 }
 
-class _GameCard extends StatelessWidget {
-  const _GameCard({
-    required this.emoji,
+class _Carta extends StatelessWidget {
+  const _Carta({
+    required this.icon,
     required this.title,
-    required this.subtitle,
-    required this.color,
+    required this.sub,
     required this.onTap,
     this.enabled = true,
   });
 
-  final String emoji;
+  final IconData icon;
   final String title;
-  final String subtitle;
-  final Color color;
+  final String sub;
   final VoidCallback onTap;
   final bool enabled;
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+
     return Opacity(
-      opacity: enabled ? 1 : 0.5,
-      child: InkWell(
+      opacity: enabled ? 1 : 0.45,
+      child: PressableCard(
         onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: color.withOpacity(0.25)),
-          ),
-          child: Column(
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 26)),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12.5,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 10.5,
-                  color: AppColors.inkSoft,
-                ),
-              ),
-            ],
-          ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.md,
+          vertical: Space.lg,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 19, color: p.textSecondary),
+            const SizedBox(height: Space.md),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: t.labelSmall?.copyWith(color: p.textPrimary),
+            ),
+            const SizedBox(height: 1),
+            Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall),
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _WeekSummary extends StatelessWidget {
-  const _WeekSummary({
-    required this.myPoints,
-    required this.vaultPoints,
-    required this.longestStreak,
-  });
-
-  final int myPoints;
-  final int vaultPoints;
-  final int longestStreak;
-
-  @override
-  Widget build(BuildContext context) {
-    final share = vaultPoints == 0 ? 0 : ((myPoints / vaultPoints) * 100).round();
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radius),
-      ),
-      child: Row(
-        children: [
-          _Stat(
-            label: 'Meus pontos',
-            value: Formatters.points(myPoints),
-          ),
-          const _Divider(),
-          _Stat(label: 'Do cofre', value: '$share%'),
-          const _Divider(),
-          _Stat(label: 'Melhor sequência', value: '$longestStreak d'),
-        ],
-      ),
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 34,
-      color: const Color(0xFFEFEDF7),
     );
   }
 }

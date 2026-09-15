@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../../core/theme/palette.dart';
+import '../../core/theme/tokens.dart';
 import '../../models/feed_post.dart';
 import '../../services/feed_service.dart';
 import '../../state/session_controller.dart';
 import '../../widgets/donate_points_sheet.dart';
 import '../../widgets/feed_post_card.dart';
 import '../../widgets/publish_card_sheet.dart';
+import '../../widgets/ui/pressable.dart';
+import '../../widgets/ui/primitives.dart';
 
-/// TELA 3 — Mural do Deboche & Apoio.
-///
-/// Feed fechado dos 4 integrantes: fotos das atividades, pontos ganhos,
-/// reações rápidas e as cartas de brincadeira publicadas.
+/// TELA 3 — Mural.
 class FeedScreen extends StatelessWidget {
   const FeedScreen({super.key});
 
@@ -22,6 +22,7 @@ class FeedScreen extends StatelessWidget {
     final feedService = context.read<FeedService>();
     final user = session.user;
     final family = session.family;
+    final t = Theme.of(context).textTheme;
 
     if (user == null || family == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -29,35 +30,47 @@ class FeedScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              padding: const EdgeInsets.fromLTRB(
+                Space.gutter,
+                Space.lg,
+                Space.gutter,
+                Space.lg,
+              ),
               child: Row(
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Mural do Deboche',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
+                        Text('MURAL', style: t.labelMedium),
                         const SizedBox(height: 2),
-                        Text(
-                          '${family.name} • só entre vocês 4',
-                          style: const TextStyle(
-                            color: AppColors.inkSoft,
-                            fontSize: 13,
-                          ),
-                        ),
+                        Text('Deboche & Apoio', style: t.headlineMedium),
                       ],
                     ),
                   ),
-                  IconButton.filledTonal(
-                    tooltip: 'Lançar carta',
-                    icon: const Icon(Icons.style_outlined),
-                    onPressed: () => _openCardMenu(context),
+                  Pressable(
+                    tone: PressableTone.neutral,
+                    expand: false,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Space.lg,
+                      vertical: Space.md,
+                    ),
+                    onPressed: () => _cartas(context),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.style_outlined, size: 16),
+                        SizedBox(width: Space.sm),
+                        Text(
+                          'Carta',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -65,43 +78,47 @@ class FeedScreen extends StatelessWidget {
             Expanded(
               child: StreamBuilder<List<FeedPost>>(
                 stream: feedService.watchFeed(family.id),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return const _FeedMessage(
-                      emoji: '⚠️',
-                      title: 'Não consegui carregar o mural',
-                      subtitle: 'Verifique a conexão e tente de novo.',
+                builder: (context, snap) {
+                  if (snap.hasError) {
+                    return const _Vazio(
+                      icon: Icons.wifi_off_rounded,
+                      titulo: 'Não consegui carregar',
+                      texto: 'Verifique a conexão e tente de novo.',
                     );
                   }
-
-                  if (!snapshot.hasData) {
+                  if (!snap.hasData) {
                     return const Center(child: CircularProgressIndicator());
                   }
-
-                  final posts = snapshot.data!;
+                  final posts = snap.data!;
                   if (posts.isEmpty) {
-                    return const _FeedMessage(
-                      emoji: '📭',
-                      title: 'O mural está vazio',
-                      subtitle:
-                          'Registre a primeira atividade e comece a zoeira.',
+                    return const _Vazio(
+                      icon: Icons.inbox_outlined,
+                      titulo: 'Mural vazio',
+                      texto: 'Registre a primeira atividade e comece a zoeira.',
                     );
                   }
-
                   return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                    padding: const EdgeInsets.fromLTRB(
+                      Space.gutter,
+                      0,
+                      Space.gutter,
+                      Space.huge,
+                    ),
+                    // Reserva mais altura fora da tela: rolagem rápida não
+                    // encontra item em branco esperando construir.
+                    cacheExtent: 1200,
                     itemCount: posts.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 14),
-                    itemBuilder: (context, index) {
-                      final post = posts[index];
+                    separatorBuilder: (_, __) => const SizedBox(height: Space.md),
+                    itemBuilder: (context, i) {
+                      final post = posts[i];
                       return FeedPostCard(
                         post: post,
                         currentUserId: user.id,
-                        onReaction: (key) => feedService.toggleReaction(
+                        onReaction: (k) => feedService.toggleReaction(
                           postId: post.id,
-                          reactionKey: key,
+                          reactionKey: k,
                           userId: user.id,
-                          isActive: post.hasReacted(key, user.id),
+                          isActive: post.hasReacted(k, user.id),
                         ),
                       );
                     },
@@ -115,57 +132,47 @@ class FeedScreen extends StatelessWidget {
     );
   }
 
-  void _openCardMenu(BuildContext context) {
+  void _cartas(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => Container(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
+      builder: (sheet) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(
-              padding: EdgeInsets.fromLTRB(8, 0, 8, 8),
-              child: Text(
-                'Cartas de brincadeira',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-              ),
+              padding: EdgeInsets.fromLTRB(Space.gutter, Space.sm, 0, 0),
+              child: SectionLabel('Cartas de brincadeira'),
             ),
             ListTile(
-              leading: const Text('🔥', style: TextStyle(fontSize: 26)),
+              leading: const Icon(Icons.local_fire_department_outlined),
               title: const Text('Desafio Impossível'),
-              subtitle: const Text('Mini-desafio relâmpago para o grupo'),
+              subtitle: const Text('mini-desafio relâmpago para o grupo'),
               onTap: () {
-                Navigator.of(sheetContext).pop();
+                Navigator.of(sheet).pop();
                 PublishCardSheet.show(
-                  context,
-                  FeedPostType.impossibleChallenge,
-                );
+                    context, FeedPostType.impossibleChallenge);
               },
             ),
             ListTile(
-              leading: const Text('🦸', style: TextStyle(fontSize: 26)),
+              leading: const Icon(Icons.volunteer_activism_outlined),
               title: const Text('Salva-Mãe / Salva-Pai'),
-              subtitle: const Text('Doe pontos em dobro e salve a sequência'),
+              subtitle: const Text('doe pontos em dobro e salve a sequência'),
               onTap: () {
-                Navigator.of(sheetContext).pop();
+                Navigator.of(sheet).pop();
                 DonatePointsSheet.show(context);
               },
             ),
             ListTile(
-              leading: const Text('🤡', style: TextStyle(fontSize: 26)),
+              leading: const Icon(Icons.theater_comedy_outlined),
               title: const Text('Punição Leve'),
-              subtitle: const Text('A prenda de domingo de quem fez menos'),
+              subtitle: const Text('a prenda de domingo de quem fez menos'),
               onTap: () {
-                Navigator.of(sheetContext).pop();
+                Navigator.of(sheet).pop();
                 PublishCardSheet.show(context, FeedPostType.punishment);
               },
             ),
+            const SizedBox(height: Space.md),
           ],
         ),
       ),
@@ -173,42 +180,32 @@ class FeedScreen extends StatelessWidget {
   }
 }
 
-class _FeedMessage extends StatelessWidget {
-  const _FeedMessage({
-    required this.emoji,
-    required this.title,
-    required this.subtitle,
+class _Vazio extends StatelessWidget {
+  const _Vazio({
+    required this.icon,
+    required this.titulo,
+    required this.texto,
   });
 
-  final String emoji;
-  final String title;
-  final String subtitle;
+  final IconData icon;
+  final String titulo;
+  final String texto;
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(Space.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 46)),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: AppColors.ink,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.inkSoft, height: 1.4),
-            ),
+            Icon(icon, size: 30, color: p.textMuted),
+            const SizedBox(height: Space.lg),
+            Text(titulo, style: t.titleMedium),
+            const SizedBox(height: Space.xs),
+            Text(texto, textAlign: TextAlign.center, style: t.bodyMedium),
           ],
         ),
       ),

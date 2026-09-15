@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../../core/theme/palette.dart';
+import '../../core/theme/tokens.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/activity_type.dart';
 import '../../models/app_user.dart';
@@ -15,15 +17,15 @@ import '../../services/health_service.dart';
 import '../../services/points_calculator.dart';
 import '../../state/session_controller.dart';
 import '../../widgets/activity_type_grid.dart';
+import '../../widgets/ui/activity_icons.dart';
+import '../../widgets/ui/duration_dial.dart';
+import '../../widgets/ui/pressable.dart';
+import '../../widgets/ui/primitives.dart';
 
-/// TELA 2 — Registro de Atividade.
-///
-/// Fluxo curto de propósito: escolher a modalidade, dizer o tempo, (opcional)
-/// tirar foto e confirmar. O total de pontos é recalculado a cada toque.
+/// TELA 2 — Registrar atividade.
 class RegisterActivityScreen extends StatefulWidget {
   const RegisterActivityScreen({super.key, this.onDone});
 
-  /// Chamado depois de salvar — a casca leva para o Mural.
   final VoidCallback? onDone;
 
   @override
@@ -32,239 +34,186 @@ class RegisterActivityScreen extends StatefulWidget {
 
 class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
   final ImagePicker _picker = ImagePicker();
-  final TextEditingController _stepsController = TextEditingController();
-  final TextEditingController _noteController = TextEditingController();
+  final TextEditingController _steps = TextEditingController();
+  final TextEditingController _note = TextEditingController();
 
   ActivityType _type = ActivityType.walk;
   int _minutes = 30;
-  int _steps = 0;
-  /// Bytes, não arquivo: é o que funciona no celular e no navegador.
+  int _stepCount = 0;
   Uint8List? _photoBytes;
   bool _saving = false;
   bool _loadingSteps = false;
 
-  /// Atalhos de duração — cobrem o uso real sem abrir o teclado.
-  static const List<int> _quickMinutes = [10, 15, 20, 30, 45, 60, 90];
+  static const List<int> _atalhos = [15, 30, 45, 60, 90];
 
   @override
   void dispose() {
-    _stepsController.dispose();
-    _noteController.dispose();
+    _steps.dispose();
+    _note.dispose();
     super.dispose();
-  }
-
-  /// Botão desabilitado precisa dizer o que falta, senão vira beco sem saída.
-  String _submitLabel(PointsBreakdown breakdown, bool missingPhoto) {
-    if (breakdown.total <= 0) return 'Aumente o tempo para pontuar';
-    if (missingPhoto) return 'Anexe a foto para registrar';
-    return 'Depositar ${Formatters.points(breakdown.total)} pts no cofre';
   }
 
   PointsBreakdown get _breakdown => PointsCalculator.calculate(
         type: _type,
         minutes: _minutes,
-        steps: _steps,
+        steps: _stepCount,
       );
 
   @override
   Widget build(BuildContext context) {
-    final breakdown = _breakdown;
-    // Na dúvida (família ainda carregando), exige — o padrão seguro é pedir a
-    // prova, não dispensá-la.
-    final requiresPhoto =
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final b = _breakdown;
+    final exigeFoto =
         context.watch<SessionController>().family?.requirePhotoProof ?? true;
-    final missingPhoto = requiresPhoto && _photoBytes == null;
+    final semFoto = exigeFoto && _photoBytes == null;
 
     return Scaffold(
       body: SafeArea(
+        bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            Space.gutter,
+            Space.lg,
+            Space.gutter,
+            Space.huge,
+          ),
           children: [
+            Text('Registrar', style: t.headlineMedium),
+            const SizedBox(height: Space.xs),
             Text(
-              'Registrar Atividade',
-              style: Theme.of(context).textTheme.headlineMedium,
+              'Os pontos vão direto para o cofre da família.',
+              style: t.bodyMedium,
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'Escolha o que você fez hoje. Os pontos vão direto para o cofre.',
-              style: TextStyle(color: AppColors.inkSoft, height: 1.4),
-            ),
-            const SizedBox(height: 22),
+            const SizedBox(height: Space.xl),
 
             ActivityTypeGrid(
               selected: _type,
-              onSelected: (type) => setState(() {
-                _type = type;
-                if (!type.tracksSteps) _steps = 0;
+              onSelected: (tipo) => setState(() {
+                _type = tipo;
+                if (!tipo.tracksSteps) {
+                  _stepCount = 0;
+                  _steps.clear();
+                }
               }),
             ),
-            const SizedBox(height: 26),
+            const SizedBox(height: Space.xxl),
 
-            // --- Duração --------------------------------------------------
-            Row(
-              children: [
-                Text(
-                  'Quanto tempo?',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const Spacer(),
-                Text(
-                  Formatters.duration(_minutes),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    color: AppColors.primary,
+            const SectionLabel('Duração'),
+            Surface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DurationDial(
+                    minutes: _minutes,
+                    onChanged: (m) => setState(() => _minutes = m),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _quickMinutes.map((value) {
-                final selected = _minutes == value;
-                return GestureDetector(
-                  onTap: () => setState(() => _minutes = value),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: selected ? AppColors.primary : Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: selected
-                            ? AppColors.primary
-                            : const Color(0xFFE7E5F2),
-                      ),
-                    ),
-                    child: Text(
-                      '$value min',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: selected ? Colors.white : AppColors.ink,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 8),
-            Slider(
-              value: _minutes.toDouble(),
-              min: 5,
-              max: PointsCalculator.maxMinutesPerLog.toDouble(),
-              divisions: (PointsCalculator.maxMinutesPerLog - 5) ~/ 5,
-              label: '$_minutes min',
-              onChanged: (value) => setState(() => _minutes = value.round()),
-            ),
-
-            // --- Passos (só caminhada) ------------------------------------
-            if (_type.tracksSteps) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.directions_walk,
-                            color: AppColors.primary, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Passos (opcional)',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '+1 ponto a cada 100 passos',
-                      style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
+                  const SizedBox(height: Space.lg),
+                  Row(
+                    children: [
+                      for (final v in _atalhos) ...[
                         Expanded(
-                          child: TextField(
-                            controller: _stepsController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              hintText: 'Ex.: 4200',
-                              isDense: true,
-                            ),
-                            onChanged: (value) => setState(
-                              () => _steps = int.tryParse(value) ?? 0,
-                            ),
+                          child: _Atalho(
+                            minutos: v,
+                            ativo: _minutes == v,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() => _minutes = v);
+                            },
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        IconButton.filledTonal(
-                          tooltip: 'Buscar do celular',
-                          onPressed: _loadingSteps ? null : _importSteps,
-                          icon: _loadingSteps
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2),
-                                )
-                              : const Icon(Icons.sync),
-                        ),
+                        if (v != _atalhos.last) const SizedBox(width: Space.sm),
                       ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            if (_type.tracksSteps) ...[
+              const SizedBox(height: Space.xxl),
+              const SectionLabel('Passos (opcional)'),
+              Surface(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _steps,
+                        keyboardType: TextInputType.number,
+                        style: t.titleMedium,
+                        decoration: const InputDecoration(
+                          hintText: '4200',
+                          isDense: true,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        onChanged: (v) =>
+                            setState(() => _stepCount = int.tryParse(v) ?? 0),
+                      ),
+                    ),
+                    Text('+1 pt / 100 passos', style: t.bodySmall),
+                    const SizedBox(width: Space.md),
+                    _BotaoSync(
+                      carregando: _loadingSteps,
+                      onTap: _importarPassos,
                     ),
                   ],
                 ),
               ),
             ],
 
-            const SizedBox(height: 18),
-
-            // --- Foto comprovante -----------------------------------------
-            _PhotoPicker(
+            const SizedBox(height: Space.xxl),
+            SectionLabel(exigeFoto ? 'Comprovante · obrigatório' : 'Comprovante'),
+            _Foto(
               bytes: _photoBytes,
-              required: requiresPhoto,
-              onPick: _pickPhoto,
+              obrigatoria: exigeFoto,
+              onPick: _escolherFoto,
               onRemove: () => setState(() => _photoBytes = null),
             ),
-            const SizedBox(height: 18),
 
+            const SizedBox(height: Space.xxl),
+            const SectionLabel('Comentário'),
             TextField(
-              controller: _noteController,
+              controller: _note,
               maxLength: 140,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                labelText: 'Escrever algo no mural (opcional)',
-                hintText: 'Ex.: caminhada com a vizinha 😄',
+                hintText: 'opcional — aparece no mural',
+                counterText: '',
               ),
             ),
-            const SizedBox(height: 8),
 
-            // --- Preview dos pontos ---------------------------------------
-            _PointsPreview(breakdown: breakdown, type: _type),
-            const SizedBox(height: 20),
+            const SizedBox(height: Space.xl),
+            _Resumo(breakdown: b, type: _type),
+            const SizedBox(height: Space.lg),
 
-            FilledButton(
-              onPressed: _saving || breakdown.total <= 0 || missingPhoto
-                  ? null
-                  : _submit,
+            Pressable(
+              onPressed: _saving || b.total <= 0 || semFoto ? null : _enviar,
+              padding: const EdgeInsets.symmetric(vertical: 18),
               child: _saving
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
                       child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
+                        strokeWidth: 2.4,
+                        color: p.onAccent,
                       ),
                     )
-                  : Text(_submitLabel(breakdown, missingPhoto)),
+                  : Text(
+                      b.total <= 0
+                          ? 'Aumente o tempo para pontuar'
+                          : semFoto
+                              ? 'Anexe a foto para registrar'
+                              : 'Depositar ${Formatters.points(b.total)} pts',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -272,74 +221,58 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
     );
   }
 
-  Future<void> _pickPhoto() async {
-    final source = await showModalBottomSheet<ImageSource>(
+  Future<void> _escolherFoto() async {
+    final fonte = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => Container(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
+      builder: (sheet) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
               title: const Text('Tirar foto agora'),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(ImageSource.camera),
+              onTap: () => Navigator.of(sheet).pop(ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: const Text('Escolher da galeria'),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(ImageSource.gallery),
+              onTap: () => Navigator.of(sheet).pop(ImageSource.gallery),
             ),
+            const SizedBox(height: Space.md),
           ],
         ),
       ),
     );
+    if (fonte == null) return;
 
-    if (source == null) return;
-
-    // Comprime na origem: comprovante não precisa de resolução máxima e
-    // upload leve economiza dado móvel da família.
-    final picked = await _picker.pickImage(
-      source: source,
+    final escolhida = await _picker.pickImage(
+      source: fonte,
       imageQuality: 70,
       maxWidth: 1440,
     );
+    if (escolhida == null) return;
 
-    if (picked == null) return;
-    // Lê os bytes na hora: no navegador não existe caminho de arquivo, e no
-    // celular o cache do picker pode ser apagado a qualquer momento.
-    final bytes = await picked.readAsBytes();
+    final bytes = await escolhida.readAsBytes();
     if (mounted) setState(() => _photoBytes = bytes);
   }
 
-  Future<void> _importSteps() async {
+  Future<void> _importarPassos() async {
     setState(() => _loadingSteps = true);
-    final service = context.read<StepsService>();
-
+    final servico = context.read<StepsService>();
     try {
-      final granted = await service.requestPermission();
-      final steps = granted ? await service.stepsForDay() : null;
-
+      final ok = await servico.requestPermission();
+      final passos = ok ? await servico.stepsForDay() : null;
       if (!mounted) return;
-      if (steps == null) {
+      if (passos == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'Contador de passos ainda não conectado — digite o número.',
-            ),
+            content: Text('Contador de passos não conectado — digite o número.'),
           ),
         );
       } else {
         setState(() {
-          _steps = steps;
-          _stepsController.text = steps.toString();
+          _stepCount = passos;
+          _steps.text = '$passos';
         });
       }
     } finally {
@@ -347,199 +280,125 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
     }
   }
 
-  Future<void> _submit() async {
+  Future<void> _enviar() async {
     final user = context.read<SessionController>().user;
     if (user == null) return;
 
-    // Marcada agora, antes de qualquer espera de rede: se o registro cair na
-    // fila, o que vale é a hora em que a pessoa terminou o exercício.
-    final performedAt = DateTime.now();
-
+    final feitoEm = DateTime.now();
     setState(() => _saving = true);
 
     try {
-      final result = await context.read<ActivityService>().registerActivity(
+      final r = await context.read<ActivityService>().registerActivity(
             user: user,
             type: _type,
             durationMinutes: _minutes,
-            steps: _steps,
+            steps: _stepCount,
             photoBytes: _photoBytes,
-            note: _noteController.text.trim(),
-            performedAt: performedAt,
+            note: _note.text.trim(),
+            performedAt: feitoEm,
           );
-
       if (!mounted) return;
-
-      // Volta ao estado inicial para o próximo registro.
-      setState(() {
-        _photoBytes = null;
-        _steps = 0;
-        _minutes = 30;
-        _stepsController.clear();
-        _noteController.clear();
-      });
-
-      await _showSuccess(result);
+      _limpar();
+      HapticFeedback.mediumImpact();
+      await _sucesso(r);
       widget.onDone?.call();
     } on AppException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: AppColors.danger),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
-      // Chegou aqui depois de a regra de negócio passar, então quase sempre é
-      // rede. Guardar é melhor que perder: o exercício já foi feito.
-      await _guardarParaDepois(user, performedAt);
+      await _guardar(user, feitoEm);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
-  /// Guarda o registro na fila local e limpa a tela como se tivesse enviado —
-  /// da perspectiva de quem treinou, está registrado; só ainda não subiu.
-  Future<void> _guardarParaDepois(AppUser user, DateTime performedAt) async {
-    final note = _noteController.text.trim();
-    final photo = _photoBytes;
-    final type = _type;
-    final minutes = _minutes;
-    final steps = _steps;
+  void _limpar() {
+    setState(() {
+      _photoBytes = null;
+      _stepCount = 0;
+      _minutes = 30;
+      _steps.clear();
+      _note.clear();
+    });
+  }
 
+  Future<void> _guardar(AppUser user, DateTime feitoEm) async {
+    final tipo = _type;
+    final minutos = _minutes;
     try {
       await context.read<ActivitySyncService>().enqueue(
             user: user,
-            type: type,
-            durationMinutes: minutes,
-            steps: steps,
-            photoBytes: photo,
-            note: note,
-            performedAt: performedAt,
+            type: tipo,
+            durationMinutes: minutos,
+            steps: _stepCount,
+            photoBytes: _photoBytes,
+            note: _note.text.trim(),
+            performedAt: feitoEm,
           );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível registrar nem guardar. Tente de novo.'),
-          backgroundColor: AppColors.danger,
-        ),
+        const SnackBar(content: Text('Não foi possível registrar nem guardar.')),
       );
       return;
     }
-
     if (!mounted) return;
-    setState(() {
-      _photoBytes = null;
-      _steps = 0;
-      _minutes = 30;
-      _stepsController.clear();
-      _noteController.clear();
-    });
-
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('📥', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 12),
-            const Text(
-              'Guardado no celular',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppColors.ink,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Sem internet agora. ${type.emoji} ${type.label} de '
-              '${Formatters.duration(minutes)} entra no cofre assim que a '
-              'conexão voltar — você não precisa fazer mais nada.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.inkSoft, height: 1.45),
-            ),
-          ],
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Entendi'),
-          ),
-        ],
-      ),
+    _limpar();
+    await _dialogo(
+      icone: Icons.cloud_upload_outlined,
+      titulo: 'Guardado no celular',
+      corpo: 'Sem internet agora. ${tipo.label} de '
+          '${Formatters.duration(minutos)} entra no cofre assim que a conexão '
+          'voltar — você não precisa fazer mais nada.',
     );
   }
 
-  Future<void> _showSuccess(ActivityRegistrationResult result) {
+  Future<void> _sucesso(ActivityRegistrationResult r) {
+    final premios = r.unlockedRewards;
+    return _dialogo(
+      icone: Icons.check_circle_outline_rounded,
+      titulo: '+${Formatters.points(r.pointsEarned)} pts',
+      corpo: 'Cofre em ${Formatters.points(r.vaultPoints)} de '
+          '${Formatters.points(r.weeklyGoal)}.'
+          '${r.currentStreak > 1 ? ' Sequência de ${r.currentStreak} dias.' : ''}'
+          '${premios.isEmpty ? '' : '\n\n${premios.map((p) => '${p.emoji} ${p.title} liberado!').join('\n')}'}',
+    );
+  }
+
+  Future<void> _dialogo({
+    required IconData icone,
+    required String titulo,
+    required String corpo,
+  }) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
     return showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+      builder: (d) => AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('🎉', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 12),
-            Text(
-              '+${Formatters.points(result.pointsEarned)} pontos!',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Cofre em ${Formatters.points(result.vaultPoints)} / '
-              '${Formatters.points(result.weeklyGoal)} pts',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.inkSoft),
-            ),
-            if (result.currentStreak > 1) ...[
-              const SizedBox(height: 10),
-              Text(
-                '🔥 ${result.currentStreak} dias seguidos!',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.secondary,
-                ),
-              ),
-            ],
-            if (result.unlockedRewards.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: result.unlockedRewards
-                      .map(
-                        (reward) => Text(
-                          '${reward.emoji} ${reward.title} desbloqueado!',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1B7F4C),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-            ],
+            Icon(icone, size: 30, color: p.accent),
+            const SizedBox(height: Space.md),
+            Text(titulo, style: t.headlineMedium),
+            const SizedBox(height: Space.sm),
+            Text(corpo, style: t.bodyMedium),
           ],
         ),
         actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Ver no mural'),
+          Pressable(
+            onPressed: () => Navigator.of(d).pop(),
+            expand: false,
+            padding: const EdgeInsets.symmetric(
+              horizontal: Space.xl,
+              vertical: Space.md,
+            ),
+            child: const Text(
+              'Entendi',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -547,76 +406,132 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
   }
 }
 
-/// Cartão com o total de pontos e a explicação da conta.
-class _PointsPreview extends StatelessWidget {
-  const _PointsPreview({required this.breakdown, required this.type});
+class _Atalho extends StatelessWidget {
+  const _Atalho({
+    required this.minutos,
+    required this.ativo,
+    required this.onTap,
+  });
+
+  final int minutos;
+  final bool ativo;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: Motion.fast,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: ativo ? p.accentSoft : p.surfaceSunken,
+          borderRadius: BorderRadius.circular(Radii.sm),
+          border: Border.all(color: ativo ? p.accent : Colors.transparent),
+        ),
+        child: Text(
+          '$minutos',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: ativo ? p.accent : p.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BotaoSync extends StatelessWidget {
+  const _BotaoSync({required this.carregando, required this.onTap});
+
+  final bool carregando;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return GestureDetector(
+      onTap: carregando ? null : onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 34,
+        height: 34,
+        child: carregando
+            ? const Center(
+                child: SizedBox(
+                  width: 15,
+                  height: 15,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : Icon(Icons.sync_rounded, size: 18, color: p.accent),
+      ),
+    );
+  }
+}
+
+class _Resumo extends StatelessWidget {
+  const _Resumo({required this.breakdown, required this.type});
 
   final PointsBreakdown breakdown;
   final ActivityType type;
 
   @override
   Widget build(BuildContext context) {
-    final color = AppColors.activityGroup[type.group.id] ?? AppColors.primary;
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(AppTheme.radius),
-        border: Border.all(color: color.withOpacity(0.25)),
-      ),
+    return Surface(
+      color: p.surfaceRaised,
       child: Column(
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              Icon(iconForActivity(type), size: 19, color: p.textSecondary),
+              const SizedBox(width: Space.md),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Você vai ganhar',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.inkSoft,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${Formatters.points(breakdown.total)} pts',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        color: color,
-                        height: 1.1,
-                      ),
-                    ),
-                  ],
-                ),
+                child: Text(type.label, style: t.labelLarge),
               ),
-              Text(type.emoji, style: const TextStyle(fontSize: 40)),
+              Text(
+                Formatters.points(breakdown.total),
+                style: t.displayMedium?.copyWith(fontSize: 30, color: p.accent),
+              ),
+              const SizedBox(width: Space.xs),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text('pts', style: t.bodySmall),
+              ),
             ],
           ),
-          const SizedBox(height: 14),
-          _BreakdownLine(
-            label: '${breakdown.completedBlocks}x ${type.blockMinutes} min',
-            value: '${breakdown.basePoints} pts',
+          const SizedBox(height: Space.md),
+          Divider(height: 1, color: p.border),
+          const SizedBox(height: Space.md),
+          _Linha(
+            label: '${breakdown.completedBlocks} × ${type.blockMinutes} min',
+            valor: '${breakdown.basePoints}',
           ),
           if (type.tracksSteps)
-            _BreakdownLine(
-              label: 'Bônus de passos',
-              value: '+${breakdown.stepsPoints} pts',
+            _Linha(
+              label: 'bônus de passos',
+              valor: '+${breakdown.stepsPoints}',
             ),
           if (breakdown.minutesToNextBlock > 0) ...[
-            const SizedBox(height: 8),
-            Text(
-              '💡 Mais ${breakdown.minutesToNextBlock} min e você ganha '
-              '+${type.blockPoints} pts',
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.inkSoft,
-              ),
+            const SizedBox(height: Space.sm),
+            Row(
+              children: [
+                Icon(Icons.trending_up_rounded, size: 14, color: p.accent),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Text(
+                    'mais ${breakdown.minutesToNextBlock} min e você ganha '
+                    '+${type.blockPoints} pts',
+                    style: t.bodySmall?.copyWith(color: p.accent),
+                  ),
+                ),
+              ],
             ),
           ],
         ],
@@ -625,30 +540,23 @@ class _PointsPreview extends StatelessWidget {
   }
 }
 
-class _BreakdownLine extends StatelessWidget {
-  const _BreakdownLine({required this.label, required this.value});
+class _Linha extends StatelessWidget {
+  const _Linha({required this.label, required this.valor});
 
   final String label;
-  final String value;
+  final String valor;
 
   @override
   Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
+          Expanded(child: Text(label, style: t.bodySmall)),
           Text(
-            label,
-            style: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
-          ),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.ink,
-            ),
+            valor,
+            style: t.bodySmall?.copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -656,93 +564,82 @@ class _BreakdownLine extends StatelessWidget {
   }
 }
 
-class _PhotoPicker extends StatelessWidget {
-  const _PhotoPicker({
+class _Foto extends StatelessWidget {
+  const _Foto({
     required this.bytes,
-    required this.required,
+    required this.obrigatoria,
     required this.onPick,
     required this.onRemove,
   });
 
   final Uint8List? bytes;
-
-  /// Quando a família exige comprovante, o vazio é um bloqueio — e precisa
-  /// parecer um: contorno laranja e a palavra "obrigatória".
-  final bool required;
-
+  final bool obrigatoria;
   final VoidCallback onPick;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+
     if (bytes == null) {
-      final accent = required ? AppColors.secondary : AppColors.primary;
-      return InkWell(
+      return PressableCard(
         onTap: onPick,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          height: 124,
-          decoration: BoxDecoration(
-            color: required ? accent.withOpacity(0.06) : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: required ? accent : const Color(0xFFD9D6E8),
-              width: required ? 2 : 1,
+        padding: const EdgeInsets.symmetric(vertical: Space.xl),
+        child: Column(
+          children: [
+            Icon(
+              Icons.add_a_photo_outlined,
+              size: 24,
+              color: obrigatoria ? p.accent : p.textSecondary,
             ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.add_a_photo_outlined, size: 28, color: accent),
-              const SizedBox(height: 8),
-              Text(
-                required ? 'Foto obrigatória' : 'Anexar foto do momento',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14.5,
-                  color: required ? accent : AppColors.ink,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                required
-                    ? 'Sem foto não dá para registrar — é a prova que vale no mural'
-                    : 'A prova vai para o mural 😄',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.inkSoft,
-                ),
-              ),
-            ],
-          ),
+            const SizedBox(height: Space.md),
+            Text(
+              obrigatoria ? 'Foto obrigatória' : 'Anexar foto',
+              style: t.labelLarge,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              obrigatoria
+                  ? 'sem foto não dá para registrar'
+                  : 'a prova vai para o mural',
+              style: t.bodySmall,
+            ),
+          ],
         ),
       );
     }
 
-    return Stack(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Image.memory(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(Radii.lg),
+      child: Stack(
+        children: [
+          Image.memory(
             bytes!,
             width: double.infinity,
             height: 200,
             fit: BoxFit.cover,
           ),
-        ),
-        Positioned(
-          top: 8,
-          right: 8,
-          child: CircleAvatar(
-            backgroundColor: Colors.black.withOpacity(0.55),
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 20),
-              onPressed: onRemove,
+          Positioned(
+            top: Space.sm,
+            right: Space.sm,
+            child: GestureDetector(
+              onTap: onRemove,
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: const BoxDecoration(
+                  color: Color(0xCC000000),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded,
+                    size: 16, color: Colors.white),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

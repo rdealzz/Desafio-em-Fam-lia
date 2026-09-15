@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/app_theme.dart';
+import '../core/theme/palette.dart';
+import '../core/theme/tokens.dart';
 import '../models/activity_type.dart';
+import 'ui/activity_icons.dart';
+import 'ui/pressable.dart';
+import 'ui/primitives.dart';
 
-/// Grade de ícones grandes para escolher a modalidade (Tela 2).
+/// Escolha da modalidade, agrupada por onde o treino acontece.
 ///
-/// Sete modalidades agrupadas por onde o treino acontece — com o título de
-/// grupo, a busca fica curta: quem vai pedalar olha só "Ao ar livre".
-/// Alvos de toque generosos: qualquer um da família acerta de primeira.
+/// Sem cor por modalidade: só o selecionado recebe o acento. A identidade vem
+/// do ícone e do nome, que é o que a pessoa lê de qualquer jeito — e resolve
+/// de graça o problema de daltonismo que sete cores criariam.
 class ActivityTypeGrid extends StatelessWidget {
   const ActivityTypeGrid({
     super.key,
@@ -23,60 +27,29 @@ class ActivityTypeGrid extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final group in ActivityGroup.values) ...[
-          _GroupHeader(group: group),
-          const SizedBox(height: 10),
-          _GroupGrid(
-            types: ActivityType.ofGroup(group),
+        for (final grupo in ActivityGroup.values) ...[
+          SectionLabel(grupo.label),
+          _Grade(
+            tipos: ActivityType.ofGroup(grupo),
             selected: selected,
             onSelected: onSelected,
           ),
-          if (group != ActivityGroup.values.last) const SizedBox(height: 20),
+          if (grupo != ActivityGroup.values.last)
+            const SizedBox(height: Space.xl),
         ],
       ],
     );
   }
 }
 
-class _GroupHeader extends StatelessWidget {
-  const _GroupHeader({required this.group});
-
-  final ActivityGroup group;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = AppColors.activityGroup[group.id] ?? AppColors.primary;
-
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          group.label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppColors.inkSoft,
-            letterSpacing: 0.2,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _GroupGrid extends StatelessWidget {
-  const _GroupGrid({
-    required this.types,
+class _Grade extends StatelessWidget {
+  const _Grade({
+    required this.tipos,
     required this.selected,
     required this.onSelected,
   });
 
-  final List<ActivityType> types;
+  final List<ActivityType> tipos;
   final ActivityType? selected;
   final ValueChanged<ActivityType> onSelected;
 
@@ -86,85 +59,73 @@ class _GroupGrid extends StatelessWidget {
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 1.45,
-      children: types
-          .map((type) => _TypeCard(
-                type: type,
-                isSelected: selected == type,
-                onTap: () => onSelected(type),
-              ))
-          .toList(),
+      mainAxisSpacing: Space.md,
+      crossAxisSpacing: Space.md,
+      childAspectRatio: 2.25,
+      children: [
+        for (final tipo in tipos)
+          _Cartao(
+            tipo: tipo,
+            selecionado: selected == tipo,
+            onTap: () => onSelected(tipo),
+          ),
+      ],
     );
   }
 }
 
-class _TypeCard extends StatelessWidget {
-  const _TypeCard({
-    required this.type,
-    required this.isSelected,
+class _Cartao extends StatelessWidget {
+  const _Cartao({
+    required this.tipo,
+    required this.selecionado,
     required this.onTap,
   });
 
-  final ActivityType type;
-  final bool isSelected;
+  final ActivityType tipo;
+  final bool selecionado;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = AppColors.activityGroup[type.group.id] ?? AppColors.primary;
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final cor = selecionado ? p.accent : p.textSecondary;
 
-    return InkWell(
+    return PressableCard(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.12) : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isSelected ? color : const Color(0xFFEFEDF7),
-            width: isSelected ? 2.5 : 1,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      selected: selecionado,
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.md,
+        vertical: Space.md,
+      ),
+      child: Row(
+        children: [
+          Icon(iconForActivity(tipo), size: 22, color: cor),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(type.emoji, style: const TextStyle(fontSize: 26)),
-                if (isSelected) ...[
-                  const Spacer(),
-                  Icon(Icons.check_circle, size: 18, color: color),
-                ],
+                Text(
+                  tipo.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.labelLarge?.copyWith(
+                    color: selecionado ? p.textPrimary : p.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${tipo.blockPoints} pts / ${tipo.blockMinutes} min',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.bodySmall,
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              type.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                color: isSelected ? color : AppColors.ink,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              type.rule,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.inkSoft,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

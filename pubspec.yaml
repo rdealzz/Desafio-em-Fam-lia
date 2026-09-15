@@ -39,5 +39,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # Sem assets declarados: o app usa emoji e cores, não imagens empacotadas.
-  # Declarar uma pasta vazia vira aviso no `flutter analyze`.
+
+  # Inter empacotada em vez de baixada em tempo de execução: sem requisição
+  # extra e sem o piscar de texto sem estilo no primeiro carregamento.
+  # Três pesos só — cada arquivo pesa ~400 KB.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-ExtraBold.ttf
+          weight: 800

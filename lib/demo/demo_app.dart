@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_theme.dart';
+import '../core/theme/theme_controller.dart';
 import '../services/activity_service.dart';
 import '../services/activity_sync_service.dart';
 import '../services/feed_service.dart';
@@ -34,10 +35,12 @@ class _DemoAppState extends State<DemoApp> {
     _activityService,
     PendingActivityStore(),
   );
+  late final ThemeController _tema = ThemeController();
 
   @override
   void dispose() {
     // `.value` não descarta por conta própria — o dono é este State.
+    _tema.dispose();
     _syncService.dispose();
     _session.dispose();
     _backend.dispose();
@@ -53,16 +56,21 @@ class _DemoAppState extends State<DemoApp> {
         Provider<FeedService>.value(value: _feedService),
         Provider<StepsService>(create: (_) => const ManualStepsService()),
         ChangeNotifierProvider<ActivitySyncService>.value(value: _syncService),
+        ChangeNotifierProvider<ThemeController>.value(value: _tema),
       ],
-      child: MaterialApp(
-        title: 'Desafio em Família — demonstração',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        home: const Banner(
-          message: 'DEMO',
-          location: BannerLocation.topEnd,
-          color: AppColors.secondary,
-          child: HomeShell(),
+      child: Consumer<ThemeController>(
+        builder: (context, tema, _) => MaterialApp(
+          title: 'Desafio em Família — demonstração',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: tema.mode,
+          home: const Banner(
+            message: 'DEMO',
+            location: BannerLocation.topEnd,
+            color: Color(0xFF9FD119),
+            child: HomeShell(),
+          ),
         ),
       ),
     );

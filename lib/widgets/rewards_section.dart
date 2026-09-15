@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/app_theme.dart';
+import '../core/theme/palette.dart';
+import '../core/theme/tokens.dart';
 import '../core/utils/formatters.dart';
 import '../models/reward.dart';
+import 'ui/primitives.dart';
 
-/// Resumo dos prêmios do fim de semana: desbloqueados em destaque,
-/// bloqueados com o quanto falta.
+/// Prêmios do fim de semana em lista compacta.
+///
+/// O emoji fica: aqui ele é conteúdo (a pizza, o açaí), não decoração de
+/// interface. Liberado ganha o acento; bloqueado mostra só quanto falta.
 class RewardsSection extends StatelessWidget {
   const RewardsSection({
     super.key,
@@ -18,112 +22,95 @@ class RewardsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (rewards.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (rewards.isEmpty) return const SizedBox.shrink();
 
-    final sorted = [...rewards]
+    final ordenados = [...rewards]
       ..sort((a, b) => a.requiredPoints.compareTo(b.requiredPoints));
 
-    return SizedBox(
-      height: 158,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        itemCount: sorted.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) => _RewardCard(
-          reward: sorted[index],
-          vaultPoints: vaultPoints,
-        ),
+    return Surface(
+      padding: const EdgeInsets.symmetric(vertical: Space.xs),
+      child: Column(
+        children: [
+          for (var i = 0; i < ordenados.length; i++) ...[
+            if (i > 0)
+              const Divider(height: 1, indent: Space.lg, endIndent: Space.lg),
+            _Item(reward: ordenados[i], vaultPoints: vaultPoints),
+          ],
+        ],
       ),
     );
   }
 }
 
-class _RewardCard extends StatelessWidget {
-  const _RewardCard({required this.reward, required this.vaultPoints});
+class _Item extends StatelessWidget {
+  const _Item({required this.reward, required this.vaultPoints});
 
   final Reward reward;
   final int vaultPoints;
 
   @override
   Widget build(BuildContext context) {
-    final unlocked = reward.unlocked;
-    final missing = (reward.requiredPoints - vaultPoints).clamp(0, 1 << 30);
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final liberado = reward.unlocked;
+    final falta = (reward.requiredPoints - vaultPoints).clamp(0, 1 << 30);
+    final fracao = reward.requiredPoints == 0
+        ? 1.0
+        : (vaultPoints / reward.requiredPoints).clamp(0.0, 1.0);
 
-    return Container(
-      width: 170,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: unlocked ? AppColors.success.withOpacity(0.10) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: unlocked
-              ? AppColors.success.withOpacity(0.45)
-              : const Color(0xFFEFEDF7),
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.lg,
+        vertical: Space.md,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Text(reward.emoji, style: const TextStyle(fontSize: 26)),
-              const Spacer(),
-              if (reward.level == 2)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'mensal',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.secondary,
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: liberado ? p.accentSoft : p.surfaceSunken,
+              borderRadius: BorderRadius.circular(Radii.sm),
+            ),
+            alignment: Alignment.center,
+            child: Text(reward.emoji, style: const TextStyle(fontSize: 18)),
+          ),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        reward.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: t.labelLarge,
+                      ),
                     ),
+                    if (reward.level == 2)
+                      Text('mensal', style: t.bodySmall),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                ProgressBarThin(
+                  value: fracao,
+                  height: 4,
+                  color: liberado ? p.accent : p.borderStrong,
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  liberado
+                      ? 'liberado'
+                      : 'faltam ${Formatters.points(falta)} pts',
+                  style: t.bodySmall?.copyWith(
+                    color: liberado ? p.accent : p.textMuted,
+                    fontWeight: liberado ? FontWeight.w600 : null,
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            reward.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-              color: AppColors.ink,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            unlocked
-                ? '✅ Desbloqueado!'
-                : 'faltam ${Formatters.points(missing)} pts',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: unlocked ? AppColors.success : AppColors.inkSoft,
-            ),
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: reward.requiredPoints == 0
-                  ? 1
-                  : (vaultPoints / reward.requiredPoints).clamp(0.0, 1.0),
-              minHeight: 6,
-              backgroundColor: const Color(0xFFEFEDF7),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                unlocked ? AppColors.success : AppColors.primary,
-              ),
+              ],
             ),
           ),
         ],

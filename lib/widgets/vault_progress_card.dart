@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/app_theme.dart';
+import '../core/theme/palette.dart';
+import '../core/theme/tokens.dart';
 import '../core/utils/formatters.dart';
 import '../models/family.dart';
+import 'ui/primitives.dart';
 
-/// Cartão principal da Tela 1: o Cofre de Pontos da Família.
+/// O Cofre da Semana — bloco principal da Tela 1.
 ///
-/// Mostra a barra de progresso da semana (ex.: 3.200 / 5.000) e o quanto
-/// falta para o próximo prêmio.
+/// Antes era um cartão com gradiente roxo. Agora o número é o herói e a cor
+/// aparece só no progresso: é a regra que as referências de 2026 repetem —
+/// um acento, reservado ao que importa. Sem gradiente, sem sombra colorida,
+/// sem competir com o resto da tela.
 class VaultProgressCard extends StatelessWidget {
   const VaultProgressCard({super.key, required this.family});
 
@@ -15,105 +19,83 @@ class VaultProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nextReward = family.nextReward;
-    final goalReached = family.goalReached;
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final proximo = family.nextReward;
+    final bateu = family.goalReached;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: AppColors.vaultGradient,
-        borderRadius: BorderRadius.circular(AppTheme.radius),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.28),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
+    return Surface(
+      padding: const EdgeInsets.all(Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text('🏦', style: TextStyle(fontSize: 22)),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Cofre da Semana',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+              Expanded(child: SectionLabel('Cofre da semana')),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Space.sm,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.20),
-                  borderRadius: BorderRadius.circular(30),
+                  color: bateu ? p.accentSoft : p.surfaceSunken,
+                  borderRadius: BorderRadius.circular(Radii.sm),
                 ),
                 child: Text(
                   '${(family.progress * 100).round()}%',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: t.labelSmall?.copyWith(
+                    color: bateu ? p.accent : p.textSecondary,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
                 Formatters.points(family.vaultPoints),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 40,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                ),
+                style: t.displayLarge,
               ),
-              const SizedBox(width: 6),
-              Text(
-                '/ ${Formatters.points(family.weeklyGoal)} pts',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.85),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: Space.sm),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  '/ ${Formatters.points(family.weeklyGoal)}',
+                  style: t.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: p.textMuted,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: LinearProgressIndicator(
-              value: family.progress,
-              minHeight: 14,
-              backgroundColor: Colors.white.withOpacity(0.25),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.secondary),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            goalReached
-                ? '🎉 Meta batida! Os prêmios do fim de semana estão liberados.'
-                : nextReward != null
-                    ? 'Faltam ${Formatters.points(nextReward.requiredPoints - family.vaultPoints)} pts '
-                        'para ${nextReward.emoji} ${nextReward.title}'
-                    : 'Faltam ${Formatters.points(family.pointsRemaining)} pts para a meta',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.92),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+          const SizedBox(height: Space.lg),
+          ProgressBarThin(value: family.progress, height: 10),
+          const SizedBox(height: Space.md),
+          Row(
+            children: [
+              Icon(
+                bateu ? Icons.check_circle_rounded : Icons.flag_outlined,
+                size: 15,
+                color: bateu ? p.accent : p.textMuted,
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text(
+                  bateu
+                      ? 'Meta batida. Prêmios do fim de semana liberados.'
+                      : proximo != null
+                          ? 'Faltam ${Formatters.points(proximo.requiredPoints - family.vaultPoints)} pts para ${proximo.title}'
+                          : 'Faltam ${Formatters.points(family.pointsRemaining)} pts para a meta',
+                  style: t.bodySmall?.copyWith(
+                    color: bateu ? p.accent : p.textSecondary,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

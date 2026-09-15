@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/app_theme.dart';
+import '../core/theme/palette.dart';
+import '../core/theme/tokens.dart';
 import '../core/utils/formatters.dart';
 import '../models/activity_log.dart';
+import 'ui/primitives.dart';
 
 /// Pontos por dia nos últimos 7 dias.
 ///
@@ -51,64 +53,51 @@ class WeeklyActivityStrip extends StatelessWidget {
     final weekTotal = totals.fold<int>(0, (sum, d) => sum + d.points);
     final activeDays = totals.where((d) => d.points > 0).length;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radius),
-        border: Border.all(color: const Color(0xFFEFEDF7)),
-      ),
+    final t = Theme.of(context).textTheme;
+
+    return Surface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          SectionLabel(
+            'Últimos 7 dias',
+            trailing: Text('$activeDays de 7 dias', style: t.bodySmall),
+          ),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
-              const Expanded(
-                child: Text(
-                  'Últimos 7 dias',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: AppColors.ink,
-                  ),
-                ),
-              ),
-              Text(
-                '$activeDays de 7 dias',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.inkSoft,
-                  fontWeight: FontWeight.w600,
-                ),
+              Text(Formatters.points(weekTotal), style: t.displayMedium),
+              const SizedBox(width: Space.sm),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('pts no período', style: t.bodyMedium),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            '${Formatters.points(weekTotal)} pts no período',
-            style: const TextStyle(fontSize: 12.5, color: AppColors.inkSoft),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 108,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                for (var i = 0; i < totals.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 6),
-                  Expanded(
-                    child: _DayBar(
-                      total: totals[i],
-                      peak: peak,
-                      label: _weekdayInitials[totals[i].day.weekday - 1],
-                      isToday: i == totals.length - 1,
-                      onTap: onDaySelected == null
-                          ? null
-                          : () => onDaySelected!(totals[i].day),
+          const SizedBox(height: Space.lg),
+          RepaintBoundary(
+            child: SizedBox(
+              height: 104,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  for (var i = 0; i < totals.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    Expanded(
+                      child: _DayBar(
+                        total: totals[i],
+                        peak: peak,
+                        label: _weekdayInitials[totals[i].day.weekday - 1],
+                        isToday: i == totals.length - 1,
+                        onTap: onDaySelected == null
+                            ? null
+                            : () => onDaySelected!(totals[i].day),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ],
@@ -144,10 +133,12 @@ class _DayBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasActivity = total.points > 0;
-    // Piso visível para um dia que pontuou pouco não sumir contra a base.
-    final ratio = peak == 0 ? 0.0 : total.points / peak;
-    final height = hasActivity ? (8 + ratio * (_trackHeight - 8)) : 3.0;
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final temAtividade = total.points > 0;
+    final fracao = peak == 0 ? 0.0 : total.points / peak;
+    // Piso visível: um dia de poucos pontos não pode sumir contra a base.
+    final altura = temAtividade ? (10 + fracao * (_trackHeight - 10)) : 3.0;
 
     return GestureDetector(
       onTap: onTap,
@@ -156,13 +147,12 @@ class _DayBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Text(
-            hasActivity ? '${total.points}' : '',
+            temAtividade ? '${total.points}' : '',
             maxLines: 1,
-            overflow: TextOverflow.clip,
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.inkSoft,
+            style: t.bodySmall?.copyWith(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: p.textMuted,
             ),
           ),
           const SizedBox(height: 4),
@@ -172,14 +162,11 @@ class _DayBar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 240),
-                  height: height,
+                  duration: Motion.base,
+                  curve: Motion.enter,
+                  height: altura,
                   decoration: BoxDecoration(
-                    color: hasActivity
-                        ? AppColors.primary
-                        : const Color(0xFFDDD9EC),
-                    // Extremidade arredondada só no topo: a barra fica ancorada
-                    // na base, que é a referência de leitura.
+                    color: temAtividade ? p.accent : p.border,
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(4),
                     ),
@@ -191,10 +178,10 @@ class _DayBar extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 11.5,
+            style: t.bodySmall?.copyWith(
+              fontSize: 11,
               fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
-              color: isToday ? AppColors.primary : AppColors.inkSoft,
+              color: isToday ? p.accent : p.textMuted,
             ),
           ),
         ],
