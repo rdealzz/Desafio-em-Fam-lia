@@ -97,6 +97,7 @@ lib/
 
 web/                           # index.html e manifest da versão navegador
 vercel.json                    # deploy da versão web
+docs/vercel.md                 # publicar e diagnosticar o deploy
 scripts/vercel_build.sh        # baixa o Flutter e compila na Vercel
 scripts/create_firebase_project.sh  # cria o projeto Firebase do zero
 scripts/setup_firebase.sh      # liga o app a um projeto Firebase real
@@ -237,12 +238,17 @@ Serve para ver a interface e mostrar para a família antes de instalar nada.
 flutter run -d chrome --dart-define=DEMO_MODE=true
 ```
 
-O deploy está configurado em `vercel.json`. É só ligar o repositório na Vercel —
-ela lê o arquivo, baixa o Flutter e publica `build/web`. Cada push na `main`
-gera um deploy novo.
+O deploy está configurado em `vercel.json`. É só ligar o repositório na Vercel
+(**Root Directory** na raiz, **Framework Preset** `Other`) — ela lê o arquivo,
+baixa o Flutter e publica `build/web`. Cada push na `main` gera um deploy novo.
 
 > **Primeiro deploy demora.** O ambiente da Vercel não tem Flutter, então o
-> build clona o SDK (~200 MB) antes de compilar.
+> build clona o SDK antes de compilar.
+
+> **Deu 404?** Quer dizer que nenhum deploy concluiu — quase sempre o
+> repositório ainda não está ligado na Vercel. Passo a passo e diagnóstico em
+> [`docs/vercel.md`](docs/vercel.md). Se o build falhar, a página publicada
+> mostra o log do erro em vez de sumir.
 
 Para publicar ligado no Firebase de verdade em vez da demonstração, tire o
 `--dart-define=DEMO_MODE=true` de `scripts/vercel_build.sh` e preencha a seção
