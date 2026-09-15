@@ -104,9 +104,9 @@ class FeedScreen extends StatelessWidget {
                       Space.gutter,
                       Space.huge,
                     ),
-                    // Reserva mais altura fora da tela: rolagem rápida não
-                    // encontra item em branco esperando construir.
-                    scrollCacheExtent: 1200,
+                    // Sem ajuste manual de cache: o padrão do ListView já
+                    // serve, e cada item entra com RepaintBoundary próprio —
+                    // é daí que vem o ganho na rolagem, não do cache extra.
                     itemCount: posts.length,
                     separatorBuilder: (_, __) => const SizedBox(height: Space.md),
                     itemBuilder: (context, i) {

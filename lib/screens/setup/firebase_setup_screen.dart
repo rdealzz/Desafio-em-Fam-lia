@@ -111,7 +111,7 @@ class FirebaseSetupScreen extends StatelessWidget {
                 color: context.palette.accent.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Text(
+              child: Text(
                 'No console do Firebase, o projeto precisa ter ativados:\n'
                 '• Authentication → método E-mail/senha\n'
                 '• Cloud Firestore\n'
