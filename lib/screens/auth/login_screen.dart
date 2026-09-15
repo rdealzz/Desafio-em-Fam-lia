@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/palette.dart';
 import '../../core/theme/tokens.dart';
 import '../../services/app_exception.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/ui/inset_group.dart';
+import '../../widgets/ui/pressable.dart';
 
-/// Entrada do app: login ou cadastro (que já cria/entra numa família).
+/// Entrada do app: usuário e senha.
+///
+/// Dois campos para entrar. Para criar conta, o mínimo: nome, usuário, senha e
+/// de qual família você faz parte. Sem e-mail, sem confirmação, sem etapa
+/// extra — cada pessoa se cadastra sozinha em menos de um minuto.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -15,25 +22,25 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController();
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  final _familyName = TextEditingController();
-  final _inviteCode = TextEditingController();
+  final _usuario = TextEditingController();
+  final _senha = TextEditingController();
+  final _nome = TextEditingController();
+  final _nomeFamilia = TextEditingController();
+  final _convite = TextEditingController();
 
-  bool _isSignUp = false;
-  bool _createNewFamily = true;
-  bool _loading = false;
-  String? _error;
-  String _role = 'membro';
+  bool _criandoConta = false;
+  bool _criarFamilia = true;
+  bool _mostrarSenha = false;
+  bool _carregando = false;
+  String? _erro;
   String _avatar = '🙂';
+  String _papel = 'membro';
 
-  static const List<String> _avatars = [
-    '🙂', '😎', '🦸', '🧔', '👩', '👵', '👴', '🐻', '🦊', '🐼'
+  static const List<String> _avatares = [
+    '🙂', '😎', '🦸', '🧔', '👩', '👵', '👴', '🐻', '🦊', '🐼',
   ];
 
-  static const Map<String, String> _roles = {
+  static const Map<String, String> _papeis = {
     'mae': 'Mãe',
     'pai': 'Pai',
     'filho': 'Filho(a)',
@@ -42,432 +49,498 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _name.dispose();
-    _email.dispose();
-    _password.dispose();
-    _familyName.dispose();
-    _inviteCode.dispose();
+    for (final c in [_usuario, _senha, _nome, _nomeFamilia, _convite]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            Space.gutter,
+            Space.xxl,
+            Space.gutter,
+            Space.huge,
+          ),
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: p.accentSoft,
+                borderRadius: BorderRadius.circular(Radii.card),
+              ),
+              alignment: Alignment.center,
+              child: Icon(Icons.groups_rounded, size: 27, color: p.accent),
+            ),
+            const SizedBox(height: Space.lg),
+            Text('Desafio em Família', style: t.headlineMedium),
+            const SizedBox(height: Space.xs),
+            Text(
+              'Um cofre de pontos, quatro pessoas, um prêmio por semana.',
+              style: t.bodyMedium,
+            ),
+            const SizedBox(height: Space.xxl),
+
+            _Alternador(
+              criandoConta: _criandoConta,
+              onChanged: (v) => setState(() {
+                _criandoConta = v;
+                _erro = null;
+              }),
+            ),
+            const SizedBox(height: Space.xl),
+
+            if (_criandoConta) ...[
+              InsetGroup(
+                header: 'Quem é você',
+                children: [
+                  _Campo(
+                    controller: _nome,
+                    label: 'Nome',
+                    hint: 'Como a família te chama',
+                    icon: Icons.person_outline_rounded,
+                    capitalize: true,
+                  ),
+                  InsetRow(
+                    icon: Icons.family_restroom_rounded,
+                    title: 'Papel na família',
+                    showChevron: false,
+                    trailing: DropdownButton<String>(
+                      value: _papel,
+                      underline: const SizedBox.shrink(),
+                      borderRadius: BorderRadius.circular(Radii.group),
+                      items: [
+                        for (final e in _papeis.entries)
+                          DropdownMenuItem(value: e.key, child: Text(e.value)),
+                      ],
+                      onChanged: (v) =>
+                          setState(() => _papel = v ?? 'membro'),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      Space.lg,
+                      Space.md,
+                      Space.lg,
+                      Space.lg,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Avatar', style: t.labelLarge),
+                        const SizedBox(height: Space.md),
+                        _SeletorAvatar(
+                          avatares: _avatares,
+                          selecionado: _avatar,
+                          onSelected: (a) => setState(() => _avatar = a),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Space.xl),
+            ],
+
+            InsetGroup(
+              header: _criandoConta ? 'Sua entrada' : 'Entrar',
+              footer: _criandoConta
+                  ? 'Anote a senha: sem e-mail cadastrado, não há recuperação '
+                      'automática.'
+                  : null,
               children: [
-                const Text('🏆', style: TextStyle(fontSize: 52)),
-                const SizedBox(height: 12),
-                Text(
-                  'Desafio em Família',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Um cofre de pontos, quatro pessoas, um prêmio por semana.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 28),
-
-                // Alternância login / cadastro
-                Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: context.palette.surface,
-                    borderRadius: BorderRadius.circular(Radii.md),
-                  ),
-                  child: Row(
-                    children: [
-                      _ModeTab(
-                        label: 'Entrar',
-                        selected: !_isSignUp,
-                        onTap: () => setState(() {
-                          _isSignUp = false;
-                          _error = null;
-                        }),
-                      ),
-                      _ModeTab(
-                        label: 'Criar conta',
-                        selected: _isSignUp,
-                        onTap: () => setState(() {
-                          _isSignUp = true;
-                          _error = null;
-                        }),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                if (_isSignUp) ...[
-                  TextFormField(
-                    controller: _name,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(
-                      labelText: 'Seu nome',
-                      prefixIcon: Icon(Icons.person_outline),
-                    ),
-                    validator: (value) =>
-                        (value == null || value.trim().length < 2)
-                            ? 'Digite seu nome'
-                            : null,
-                  ),
-                  const SizedBox(height: 14),
-                  _AvatarPicker(
-                    avatars: _avatars,
-                    selected: _avatar,
-                    onSelected: (emoji) => setState(() => _avatar = emoji),
-                  ),
-                  const SizedBox(height: 14),
-                  DropdownButtonFormField<String>(
-                    initialValue: _role,
-                    decoration: const InputDecoration(
-                      labelText: 'Quem é você na família?',
-                      prefixIcon: Icon(Icons.family_restroom_outlined),
-                    ),
-                    items: _roles.entries
-                        .map((entry) => DropdownMenuItem(
-                              value: entry.key,
-                              child: Text(entry.value),
-                            ))
-                        .toList(),
-                    onChanged: (value) =>
-                        setState(() => _role = value ?? 'membro'),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-
-                TextFormField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
+                _Campo(
+                  controller: _usuario,
+                  label: 'Usuário',
+                  hint: 'ex.: rafael',
+                  icon: Icons.alternate_email_rounded,
                   autocorrect: false,
-                  decoration: const InputDecoration(
-                    labelText: 'E-mail',
-                    prefixIcon: Icon(Icons.mail_outline),
-                  ),
-                  validator: (value) => (value == null || !value.contains('@'))
-                      ? 'E-mail inválido'
-                      : null,
                 ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _password,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Senha',
-                    prefixIcon: Icon(Icons.lock_outline),
-                  ),
-                  validator: (value) => (value == null || value.length < 6)
-                      ? 'Mínimo de 6 caracteres'
-                      : null,
-                ),
-
-                if (_isSignUp) ...[
-                  const SizedBox(height: 22),
-                  const Text(
-                    'Sua família',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ChoiceCard(
-                          emoji: '🏠',
-                          label: 'Criar família',
-                          selected: _createNewFamily,
-                          onTap: () =>
-                              setState(() => _createNewFamily = true),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _ChoiceCard(
-                          emoji: '🔑',
-                          label: 'Tenho convite',
-                          selected: !_createNewFamily,
-                          onTap: () =>
-                              setState(() => _createNewFamily = false),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  if (_createNewFamily)
-                    TextFormField(
-                      controller: _familyName,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Nome da família',
-                        hintText: 'Ex.: Família Silva',
-                        prefixIcon: Icon(Icons.home_outlined),
-                      ),
-                      validator: (value) {
-                        if (!_isSignUp || !_createNewFamily) return null;
-                        return (value == null || value.trim().isEmpty)
-                            ? 'Dê um nome para a família'
-                            : null;
-                      },
-                    )
-                  else
-                    TextFormField(
-                      controller: _inviteCode,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'Código do convite',
-                        hintText: 'Ex.: K7M2PQ',
-                        prefixIcon: Icon(Icons.vpn_key_outlined),
-                      ),
-                      validator: (value) {
-                        if (!_isSignUp || _createNewFamily) return null;
-                        return (value == null || value.trim().length < 4)
-                            ? 'Informe o código recebido'
-                            : null;
-                      },
-                    ),
-                ],
-
-                if (_error != null) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: context.palette.surfaceRaised,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      _error!,
-                      style: TextStyle(
-                        color: context.palette.danger,
-                        fontSize: 13.5,
-                      ),
+                _Campo(
+                  controller: _senha,
+                  label: 'Senha',
+                  hint: 'mínimo ${AuthService.minSenha} caracteres',
+                  icon: Icons.lock_outline_rounded,
+                  obscure: !_mostrarSenha,
+                  trailing: GestureDetector(
+                    onTap: () =>
+                        setState(() => _mostrarSenha = !_mostrarSenha),
+                    behavior: HitTestBehavior.opaque,
+                    child: Icon(
+                      _mostrarSenha
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      size: 19,
+                      color: p.textMuted,
                     ),
                   ),
-                ],
-
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _loading ? null : _submit,
-                  child: _loading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(_isSignUp ? 'Criar minha conta' : 'Entrar'),
                 ),
-                if (!_isSignUp) ...[
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: _loading ? null : _resetPassword,
-                    child: const Text('Esqueci minha senha'),
-                  ),
-                ],
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    final auth = context.read<AuthService>();
-
-    try {
-      if (_isSignUp) {
-        await auth.signUp(
-          name: _name.text,
-          email: _email.text,
-          password: _password.text,
-          role: _role,
-          avatarEmoji: _avatar,
-          familyName: _createNewFamily ? _familyName.text : null,
-          inviteCode: _createNewFamily ? null : _inviteCode.text,
-        );
-      } else {
-        await auth.signIn(email: _email.text, password: _password.text);
-      }
-      // O AuthGate troca de tela sozinho quando a sessão muda.
-    } on AppException catch (e) {
-      setState(() => _error = e.message);
-    } catch (_) {
-      setState(() => _error = 'Algo deu errado. Tente novamente.');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _resetPassword() async {
-    if (!_email.text.contains('@')) {
-      setState(() => _error = 'Digite seu e-mail para recuperar a senha.');
-      return;
-    }
-    try {
-      await context.read<AuthService>().sendPasswordReset(_email.text);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enviamos um e-mail de recuperação.')),
-      );
-    } on AppException catch (e) {
-      setState(() => _error = e.message);
-    }
-  }
-}
-
-class _ModeTab extends StatelessWidget {
-  const _ModeTab({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: selected ? context.palette.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: selected
-                  ? context.palette.onAccent
-                  : context.palette.textSecondary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ChoiceCard extends StatelessWidget {
-  const _ChoiceCard({
-    required this.emoji,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String emoji;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          color: selected ? context.palette.accentSoft : context.palette.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? context.palette.accent : context.palette.border,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 24)),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+            if (_criandoConta) ...[
+              const SizedBox(height: Space.xl),
+              InsetGroup(
+                header: 'Sua família',
+                footer: _criarFamilia
+                    ? 'Depois você compartilha o código do convite com os outros.'
+                    : 'Peça o código para quem já criou a família.',
+                children: [
+                  InsetRow(
+                    icon: Icons.add_home_outlined,
+                    title: 'Criar uma família',
+                    subtitle: 'sou o primeiro a entrar',
+                    showChevron: false,
+                    onTap: () => setState(() => _criarFamilia = true),
+                    trailing: _Marca(ativo: _criarFamilia),
+                  ),
+                  InsetRow(
+                    icon: Icons.vpn_key_outlined,
+                    title: 'Tenho um convite',
+                    subtitle: 'alguém já criou',
+                    showChevron: false,
+                    onTap: () => setState(() => _criarFamilia = false),
+                    trailing: _Marca(ativo: !_criarFamilia),
+                  ),
+                  if (_criarFamilia)
+                    _Campo(
+                      controller: _nomeFamilia,
+                      label: 'Nome da família',
+                      hint: 'ex.: Família Silva',
+                      icon: Icons.home_outlined,
+                      capitalize: true,
+                    )
+                  else
+                    _Campo(
+                      controller: _convite,
+                      label: 'Código do convite',
+                      hint: 'ex.: K7M2PQ',
+                      icon: Icons.confirmation_number_outlined,
+                      uppercase: true,
+                      autocorrect: false,
+                    ),
+                ],
               ),
+            ],
+
+            if (_erro != null) ...[
+              const SizedBox(height: Space.lg),
+              Container(
+                padding: const EdgeInsets.all(Space.md),
+                decoration: BoxDecoration(
+                  color: p.energySoft,
+                  borderRadius: BorderRadius.circular(Radii.group),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline_rounded,
+                        size: 18, color: p.danger),
+                    const SizedBox(width: Space.sm),
+                    Expanded(
+                      child: Text(
+                        _erro!,
+                        style: t.bodySmall?.copyWith(color: p.danger),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: Space.xl),
+            Pressable(
+              onPressed: _carregando ? null : _enviar,
+              padding: const EdgeInsets.symmetric(vertical: 17),
+              child: _carregando
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: p.onAccent,
+                      ),
+                    )
+                  : Text(
+                      _criandoConta ? 'Criar minha conta' : 'Entrar',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
             ),
           ],
         ),
       ),
     );
   }
+
+  Future<void> _enviar() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+
+    final auth = context.read<AuthService>();
+    try {
+      if (_criandoConta) {
+        await auth.signUp(
+          name: _nome.text,
+          username: _usuario.text,
+          password: _senha.text,
+          role: _papel,
+          avatarEmoji: _avatar,
+          familyName: _criarFamilia ? _nomeFamilia.text : null,
+          inviteCode: _criarFamilia ? null : _convite.text,
+        );
+      } else {
+        await auth.signIn(username: _usuario.text, password: _senha.text);
+      }
+      // O AuthGate troca de tela sozinho quando a sessão muda.
+    } on AppException catch (e) {
+      setState(() => _erro = e.message);
+    } catch (_) {
+      setState(() => _erro = 'Algo deu errado. Tente novamente.');
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
 }
 
-class _AvatarPicker extends StatelessWidget {
-  const _AvatarPicker({
-    required this.avatars,
-    required this.selected,
+/// Campo de texto embutido na linha do grupo — sem caixa dentro de caixa.
+class _Campo extends StatelessWidget {
+  const _Campo({
+    required this.controller,
+    required this.label,
+    required this.icon,
+    this.hint,
+    this.obscure = false,
+    this.capitalize = false,
+    this.uppercase = false,
+    this.autocorrect = true,
+    this.trailing,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final String? hint;
+  final bool obscure;
+  final bool capitalize;
+  final bool uppercase;
+  final bool autocorrect;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.lg,
+        vertical: Space.md,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: p.textSecondary),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label, style: t.bodySmall),
+                TextField(
+                  controller: controller,
+                  obscureText: obscure,
+                  autocorrect: autocorrect,
+                  enableSuggestions: autocorrect,
+                  textCapitalization: capitalize
+                      ? TextCapitalization.words
+                      : TextCapitalization.none,
+                  inputFormatters:
+                      uppercase ? [UpperCaseFormatter()] : const [],
+                  style: t.labelLarge,
+                  decoration: InputDecoration(
+                    hintText: hint,
+                    isDense: true,
+                    filled: false,
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: Space.sm),
+            trailing!,
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Deixa o código do convite em caixa alta enquanto se digita.
+class UpperCaseFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+    );
+  }
+}
+
+class _Alternador extends StatelessWidget {
+  const _Alternador({required this.criandoConta, required this.onChanged});
+
+  final bool criandoConta;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: p.surfaceSunken,
+        borderRadius: BorderRadius.circular(Radii.group),
+      ),
+      child: Row(
+        children: [
+          _Aba(
+            texto: 'Entrar',
+            ativo: !criandoConta,
+            onTap: () => onChanged(false),
+          ),
+          _Aba(
+            texto: 'Criar conta',
+            ativo: criandoConta,
+            onTap: () => onChanged(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Aba extends StatelessWidget {
+  const _Aba({required this.texto, required this.ativo, required this.onTap});
+
+  final String texto;
+  final bool ativo;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: Motion.fast,
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: ativo ? p.surface : Colors.transparent,
+            borderRadius: BorderRadius.circular(Radii.sm),
+            border: Border.all(
+              color: ativo ? p.border : Colors.transparent,
+            ),
+          ),
+          child: Text(
+            texto,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: ativo ? p.textPrimary : p.textSecondary,
+                ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Marca extends StatelessWidget {
+  const _Marca({required this.ativo});
+
+  final bool ativo;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Icon(
+      ativo ? Icons.check_circle_rounded : Icons.circle_outlined,
+      size: 21,
+      color: ativo ? p.accent : p.borderStrong,
+    );
+  }
+}
+
+class _SeletorAvatar extends StatelessWidget {
+  const _SeletorAvatar({
+    required this.avatares,
+    required this.selecionado,
     required this.onSelected,
   });
 
-  final List<String> avatars;
-  final String selected;
+  final List<String> avatares;
+  final String selecionado;
   final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Escolha seu avatar',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 52,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: avatars.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final emoji = avatars[index];
-              final isSelected = emoji == selected;
-              return GestureDetector(
-                onTap: () => onSelected(emoji),
-                child: Container(
-                  width: 52,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? context.palette.accentSoft
-                        : context.palette.surface,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isSelected
-                          ? context.palette.accent
-                          : context.palette.border,
-                      width: isSelected ? 2.5 : 1,
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(emoji, style: const TextStyle(fontSize: 24)),
-                ),
-              );
+    final p = context.palette;
+    return SizedBox(
+      height: 46,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: avatares.length,
+        separatorBuilder: (_, __) => const SizedBox(width: Space.sm),
+        itemBuilder: (context, i) {
+          final emoji = avatares[i];
+          final ativo = emoji == selecionado;
+          return GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onSelected(emoji);
             },
-          ),
-        ),
-      ],
+            child: AnimatedContainer(
+              duration: Motion.fast,
+              width: 46,
+              decoration: BoxDecoration(
+                color: ativo ? p.accentSoft : p.surfaceSunken,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: ativo ? p.accent : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(emoji, style: const TextStyle(fontSize: 21)),
+            ),
+          );
+        },
+      ),
     );
   }
 }

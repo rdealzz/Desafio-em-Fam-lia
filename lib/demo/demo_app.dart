@@ -68,7 +68,7 @@ class _DemoAppState extends State<DemoApp> {
           home: const Banner(
             message: 'DEMO',
             location: BannerLocation.topEnd,
-            color: Color(0xFF9FD119),
+            color: Color(0xFF2E90FA),
             child: HomeShell(),
           ),
         ),

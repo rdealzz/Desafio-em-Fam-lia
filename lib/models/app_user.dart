@@ -7,6 +7,7 @@ class AppUser {
     required this.id,
     required this.familyId,
     required this.displayName,
+    this.username = '',
     this.email = '',
     this.role = 'membro',
     this.avatarEmoji = '🙂',
@@ -25,6 +26,11 @@ class AppUser {
   final String id;
   final String familyId;
   final String displayName;
+
+  /// Apelido de entrada, em forma canônica (minúsculo, sem acento).
+  final String username;
+
+  /// Guardado só se a pessoa quiser; a entrada é por apelido.
   final String email;
 
   /// Papel na família: `mae`, `pai`, `filho`, `nora`... usado só para exibição.
@@ -74,6 +80,7 @@ class AppUser {
       familyId: FirestoreUtils.toStringValue(map['familyId']),
       displayName: FirestoreUtils.toStringValue(map['displayName'],
           fallback: 'Sem nome'),
+      username: FirestoreUtils.toStringValue(map['username']),
       email: FirestoreUtils.toStringValue(map['email']),
       role: FirestoreUtils.toStringValue(map['role'], fallback: 'membro'),
       avatarEmoji:
@@ -94,6 +101,7 @@ class AppUser {
   Map<String, dynamic> toMap() => {
         'familyId': familyId,
         'displayName': displayName,
+        'username': username,
         'email': email,
         'role': role,
         'avatarEmoji': avatarEmoji,
@@ -128,6 +136,7 @@ class AppUser {
       id: id,
       familyId: familyId ?? this.familyId,
       displayName: displayName ?? this.displayName,
+      username: username,
       email: email,
       role: role ?? this.role,
       avatarEmoji: avatarEmoji ?? this.avatarEmoji,

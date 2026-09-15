@@ -278,6 +278,17 @@ flutter test
 
 ## Primeiro uso, com a família
 
+Entrada por **usuário e senha** — sem e-mail. Cada um escolhe um apelido curto
+(`rafael`, `rosa.maria`) e uma senha. O apelido vira um identificador interno
+para o Firebase Authentication, que só trabalha com e-mail; esse endereço nunca
+aparece nem recebe mensagem, e de quebra o próprio Firebase garante que dois
+apelidos não se repitam.
+
+> **Não há recuperação automática de senha.** Sem e-mail de verdade, quem
+> esquecer precisa criar outra conta. Para quatro pessoas é um custo pequeno
+> perto de simplificar a entrada — se incomodar, dá para acrescentar
+> recuperação depois.
+
 1. A primeira pessoa cria a conta escolhendo **"Criar família"**.
 2. No dashboard, toque em **⋮ → código do convite** e mande no grupo do
    WhatsApp.

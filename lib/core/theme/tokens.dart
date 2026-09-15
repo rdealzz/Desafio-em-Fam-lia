@@ -27,6 +27,13 @@ class Radii {
   static const double xl = 24;
   static const double pill = 999;
 
+  /// Raios na escala da Apple: botão um pouco mais fechado que o cartão.
+  static const double button = 14;
+  static const double card = 16;
+
+  /// Grupo de lista embutida (estilo Ajustes do iOS).
+  static const double group = 12;
+
   static const BorderRadius card = BorderRadius.all(Radius.circular(lg));
   static const BorderRadius sheet =
       BorderRadius.vertical(top: Radius.circular(xl));
@@ -46,7 +53,7 @@ class Motion {
   static const Curve enter = Curves.easeOutCubic;
   static const Curve exit = Curves.easeInCubic;
 
-  /// Para o botão que afunda: volta com um leve exagero, como material real.
+  /// Volta com leve ultrapassagem, como mola — é o que dá peso ao toque.
   static const Curve press = Curves.easeOutBack;
 }
 

@@ -6,17 +6,21 @@ import '../../core/theme/tokens.dart';
 
 enum PressableTone { primary, neutral, ghost, danger }
 
-/// Botão com profundidade real: uma base sólida fica sob a face, e ao tocar a
-/// face desce até encostar nela. Some o degrau, o botão parece afundar.
+/// Botão com a resposta de toque da Apple.
 ///
-/// Por que assim e não relevo com luz falsa dos dois lados (neumorfismo): a
-/// referência de 2026 é elevação seletiva, e o relevo simulado envelheceu mal
-/// além de destruir o contraste.
+/// Dois movimentos ao mesmo tempo, que é o que dá a sensação física:
 ///
-/// **60 fps**: só o `Transform` reconstrói a cada quadro — o conteúdo entra
-/// como `child` do `AnimatedBuilder` e é construído uma vez. Transform é
-/// operação de pintura, não de layout, então nada é remedido durante a
-/// animação. O `RepaintBoundary` isola o repinte do resto da tela.
+/// 1. **Encolhe sob o dedo** (escala 1 → 0,96). É o gesto característico do
+///    iOS — o botão responde onde o dedo está, mesmo quando o dedo o cobre.
+/// 2. **Afunda** na base sólida, sumindo com o degrau.
+///
+/// Ao soltar, volta com leve ultrapassagem (`easeOutBack`), como mola. Descer
+/// é mais rápido que subir: reagir tem de ser instantâneo, voltar pode
+/// respirar.
+///
+/// **60 fps**: só as matrizes de Transform refazem por quadro. O conteúdo
+/// entra como `child` do AnimatedBuilder e é construído uma vez; Transform é
+/// pintura, não layout, então nada é remedido durante a animação.
 class Pressable extends StatefulWidget {
   const Pressable({
     super.key,
@@ -27,7 +31,7 @@ class Pressable extends StatefulWidget {
       horizontal: Space.lg,
       vertical: Space.lg,
     ),
-    this.radius = Radii.md,
+    this.radius = Radii.button,
     this.depth = Depth.press,
     this.expand = true,
     this.enabled = true,
@@ -52,6 +56,10 @@ class _PressableState extends State<Pressable>
     vsync: this,
     duration: Motion.instant,
     reverseDuration: Motion.fast,
+  );
+
+  late final Animation<double> _escala = _c.drive(
+    Tween(begin: 1.0, end: 0.96).chain(CurveTween(curve: Motion.press)),
   );
 
   bool get _ativo => widget.enabled && widget.onPressed != null;
@@ -90,9 +98,13 @@ class _PressableState extends State<Pressable>
             : null,
       ),
       child: DefaultTextStyle.merge(
-        style: TextStyle(color: onFace),
+        style: TextStyle(
+          color: onFace,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.2,
+        ),
         child: IconTheme.merge(
-          data: IconThemeData(color: onFace),
+          data: IconThemeData(color: onFace, size: 19),
           child: Center(
             widthFactor: widget.expand ? null : 1,
             child: widget.child,
@@ -103,43 +115,44 @@ class _PressableState extends State<Pressable>
 
     return RepaintBoundary(
       child: Opacity(
-        opacity: _ativo ? 1 : 0.45,
+        opacity: _ativo ? 1 : 0.4,
         child: GestureDetector(
           onTapDown: _descer,
           onTapUp: _subir,
           onTapCancel: _subir,
           onTap: _ativo ? widget.onPressed : null,
           behavior: HitTestBehavior.opaque,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Base sólida: o degrau que a face cobre ao ser pressionada.
-              Positioned(
-                top: depth,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: base,
-                    borderRadius: BorderRadius.circular(widget.radius),
+          child: AnimatedBuilder(
+            animation: _c,
+            // Construído uma vez; o quadro só recalcula as transformações.
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  top: depth,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: base,
+                      borderRadius: BorderRadius.circular(widget.radius),
+                    ),
                   ),
                 ),
-              ),
-              AnimatedBuilder(
-                animation: _c,
-                // `child` é construído UMA vez e repassado: o quadro só refaz
-                // a matriz do Transform.
-                child: Padding(
+                Padding(
                   padding: EdgeInsets.only(bottom: depth),
                   child: conteudo,
                 ),
-                builder: (context, child) => Transform.translate(
-                  offset: Offset(0, depth * _c.value),
-                  child: child,
-                ),
+              ],
+            ),
+            builder: (context, child) => Transform.scale(
+              scale: _escala.value,
+              child: Transform.translate(
+                offset: Offset(0, depth * _c.value),
+                child: child,
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -160,11 +173,9 @@ class _PressableState extends State<Pressable>
   }
 }
 
-/// Cartão tocável com o mesmo princípio de profundidade, degrau menor.
+/// Cartão tocável: encolhe sob o dedo, sem o degrau do botão.
 ///
-/// Aqui a profundidade sinaliza "isto é tocável" sem transformar cada item da
-/// lista num botão gigante. Selecionado, ganha o acento e perde o degrau —
-/// fica visualmente pressionado, que é o que "escolhido" significa.
+/// Item de lista não precisa parecer botão — precisa responder ao toque.
 class PressableCard extends StatefulWidget {
   const PressableCard({
     super.key,
@@ -172,7 +183,7 @@ class PressableCard extends StatefulWidget {
     this.onTap,
     this.selected = false,
     this.padding = const EdgeInsets.all(Space.lg),
-    this.radius = Radii.lg,
+    this.radius = Radii.card,
   });
 
   final Widget child;
@@ -187,12 +198,14 @@ class PressableCard extends StatefulWidget {
 
 class _PressableCardState extends State<PressableCard>
     with SingleTickerProviderStateMixin {
-  static const double _depth = 3;
-
   late final AnimationController _c = AnimationController(
     vsync: this,
     duration: Motion.instant,
     reverseDuration: Motion.fast,
+  );
+
+  late final Animation<double> _escala = _c.drive(
+    Tween(begin: 1.0, end: 0.975).chain(CurveTween(curve: Motion.press)),
   );
 
   @override
@@ -214,20 +227,7 @@ class _PressableCardState extends State<PressableCard>
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final selecionado = widget.selected;
-
-    final face = Container(
-      padding: widget.padding,
-      decoration: BoxDecoration(
-        color: selecionado ? p.accentSoft : p.surface,
-        borderRadius: BorderRadius.circular(widget.radius),
-        border: Border.all(
-          color: selecionado ? p.accent : p.border,
-          width: selecionado ? 1.5 : 1,
-        ),
-      ),
-      child: widget.child,
-    );
+    final sel = widget.selected;
 
     return RepaintBoundary(
       child: GestureDetector(
@@ -236,33 +236,22 @@ class _PressableCardState extends State<PressableCard>
         onTapCancel: _subir,
         onTap: widget.onTap,
         behavior: HitTestBehavior.opaque,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              top: _depth,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: selecionado ? p.accentShadow : p.border,
-                  borderRadius: BorderRadius.circular(widget.radius),
-                ),
+        child: AnimatedBuilder(
+          animation: _c,
+          child: Container(
+            padding: widget.padding,
+            decoration: BoxDecoration(
+              color: sel ? p.accentSoft : p.surface,
+              borderRadius: BorderRadius.circular(widget.radius),
+              border: Border.all(
+                color: sel ? p.accent : p.border,
+                width: sel ? 1.5 : 1,
               ),
             ),
-            AnimatedBuilder(
-              animation: _c,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: _depth),
-                child: face,
-              ),
-              builder: (context, child) => Transform.translate(
-                offset: Offset(0, _depth * _c.value),
-                child: child,
-              ),
-            ),
-          ],
+            child: widget.child,
+          ),
+          builder: (context, child) =>
+              Transform.scale(scale: _escala.value, child: child),
         ),
       ),
     );

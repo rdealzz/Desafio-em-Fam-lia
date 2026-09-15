@@ -5,20 +5,23 @@ import 'package:provider/provider.dart';
 import '../../core/theme/palette.dart';
 import '../../core/theme/theme_controller.dart';
 import '../../core/theme/tokens.dart';
-import '../../core/utils/formatters.dart';
 import '../../models/feed_post.dart';
 import '../../state/session_controller.dart';
 import '../../widgets/donate_points_sheet.dart';
-import '../../widgets/member_status_row.dart';
+import '../../widgets/members_group.dart';
 import '../../widgets/pending_sync_banner.dart';
 import '../../widgets/publish_card_sheet.dart';
-import '../../widgets/rewards_section.dart';
+import '../../widgets/rewards_group.dart';
+import '../../widgets/ui/inset_group.dart';
 import '../../widgets/ui/pressable.dart';
-import '../../widgets/ui/primitives.dart';
 import '../../widgets/vault_progress_card.dart';
 import '../profile/member_profile_screen.dart';
 
 /// TELA 1 — A Casa.
+///
+/// Organizada em blocos, no formato dos Ajustes do iOS: o cofre em destaque,
+/// a ação principal logo abaixo, e o resto em grupos por assunto. Dá para
+/// varrer a tela de cima a baixo sem parar para entender cada pedaço.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key, this.onRegisterActivity});
 
@@ -29,8 +32,6 @@ class HomeScreen extends StatelessWidget {
     final session = context.watch<SessionController>();
     final family = session.family;
     final user = session.user;
-    final p = context.palette;
-    final t = Theme.of(context).textTheme;
 
     if (family == null || user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -47,36 +48,7 @@ class HomeScreen extends StatelessWidget {
             Space.huge,
           ),
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(family.name.toUpperCase(), style: t.labelMedium),
-                      const SizedBox(height: 2),
-                      Text('Olá, ${user.firstName}', style: t.headlineMedium),
-                    ],
-                  ),
-                ),
-                if (user.currentStreak > 0) _Sequencia(dias: user.currentStreak),
-                const SizedBox(width: Space.sm),
-                _BotaoIcone(
-                  icon: context.read<ThemeController>().isDark(context)
-                      ? Icons.light_mode_outlined
-                      : Icons.dark_mode_outlined,
-                  tooltip: 'Alternar tema',
-                  onTap: () =>
-                      context.read<ThemeController>().alternar(context),
-                ),
-                const SizedBox(width: Space.sm),
-                _BotaoIcone(
-                  icon: Icons.more_horiz_rounded,
-                  tooltip: 'Convite e conta',
-                  onTap: () => _menu(context),
-                ),
-              ],
-            ),
+            _Cabecalho(nome: user.firstName, familia: family.name),
             const SizedBox(height: Space.xl),
 
             const PendingSyncBanner(),
@@ -85,359 +57,203 @@ class HomeScreen extends StatelessWidget {
 
             Pressable(
               onPressed: onRegisterActivity,
-              padding: const EdgeInsets.symmetric(vertical: 18),
+              padding: const EdgeInsets.symmetric(vertical: 17),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.add_rounded, size: 21),
+                  Icon(Icons.add_rounded, size: 20),
                   SizedBox(width: Space.sm),
                   Text(
                     'Registrar atividade',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.2,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: Space.xxl),
 
-            SectionLabel(
-              'A turma esta semana',
-              trailing: Text('${family.memberIds.length}/4', style: t.bodySmall),
-            ),
-            MemberStatusRow(
+            MembersGroup(
               members: session.members,
+              totalMembros: family.memberIds.length,
               onMemberTap: (m) => MemberProfileScreen.open(context, m.id),
             ),
-            const SizedBox(height: Space.xxl),
+            const SizedBox(height: Space.xl),
 
-            SectionLabel(
-              'Prêmios',
-              trailing: Text(
-                '${family.unlockedRewards.length} liberados',
-                style: t.bodySmall,
-              ),
-            ),
-            RewardsSection(
+            RewardsGroup(
               rewards: family.rewards,
               vaultPoints: family.vaultPoints,
             ),
-            const SizedBox(height: Space.xxl),
-
-            const SectionLabel('Cartas'),
-            _Cartas(saveCards: user.saveCards),
             const SizedBox(height: Space.xl),
 
-            Surface(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: StatBlock(
-                      value: Formatters.points(user.pointsThisWeek),
-                      label: 'meus pontos',
-                      accent: true,
-                    ),
-                  ),
-                  Container(width: 1, height: 30, color: p.border),
-                  const SizedBox(width: Space.lg),
-                  Expanded(
-                    child: StatBlock(
-                      value: family.vaultPoints == 0
-                          ? '0%'
-                          : '${((user.pointsThisWeek / family.vaultPoints) * 100).round()}%',
-                      label: 'do cofre',
-                    ),
-                  ),
-                  Container(width: 1, height: 30, color: p.border),
-                  const SizedBox(width: Space.lg),
-                  Expanded(
-                    child: StatBlock(
-                      value: '${user.longestStreak}',
-                      suffix: 'd',
-                      label: 'melhor sequência',
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _GrupoCartas(saveCards: user.saveCards),
+            const SizedBox(height: Space.xl),
+
+            _GrupoConta(streak: user.currentStreak),
           ],
         ),
       ),
     );
   }
+}
 
-  void _menu(BuildContext context) {
-    final session = context.read<SessionController>();
-    final tema = context.read<ThemeController>();
-    final family = session.family;
+class _Cabecalho extends StatelessWidget {
+  const _Cabecalho({required this.nome, required this.familia});
 
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            Space.gutter,
-            Space.sm,
-            Space.gutter,
-            Space.xl,
-          ),
+  final String nome;
+  final String familia;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+
+    return Row(
+      children: [
+        Expanded(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SectionLabel('Código do convite'),
-              Pressable(
-                tone: PressableTone.ghost,
-                onPressed: () {
-                  Clipboard.setData(
-                    ClipboardData(text: family?.inviteCode ?? ''),
-                  );
-                  Navigator.of(sheet).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Código copiado')),
-                  );
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      family?.inviteCode ?? '------',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            letterSpacing: 5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(width: Space.md),
-                    const Icon(Icons.copy_rounded, size: 17),
-                  ],
-                ),
-              ),
-              const SizedBox(height: Space.xl),
-              const SectionLabel('Aparência'),
-              _SeletorTema(controller: tema),
-              const SizedBox(height: Space.xl),
-              Pressable(
-                tone: PressableTone.ghost,
-                onPressed: () {
-                  final id = session.user?.id;
-                  Navigator.of(sheet).pop();
-                  if (id != null) MemberProfileScreen.open(context, id);
-                },
-                child: const Text('Meu progresso'),
-              ),
-              const SizedBox(height: Space.md),
-              Pressable(
-                tone: PressableTone.ghost,
-                onPressed: () {
-                  Navigator.of(sheet).pop();
-                  session.signOut();
-                },
-                child: const Text('Sair da conta'),
-              ),
+              Text(familia.toUpperCase(), style: t.labelMedium),
+              const SizedBox(height: 2),
+              Text('Olá, $nome', style: t.headlineMedium),
             ],
           ),
         ),
-      ),
+        const _BotaoTema(),
+      ],
     );
   }
 }
 
-class _SeletorTema extends StatelessWidget {
-  const _SeletorTema({required this.controller});
-
-  final ThemeController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) => SegmentedButton<ThemeMode>(
-        segments: const [
-          ButtonSegment(
-            value: ThemeMode.light,
-            icon: Icon(Icons.light_mode_outlined, size: 17),
-            label: Text('Claro'),
-          ),
-          ButtonSegment(
-            value: ThemeMode.system,
-            icon: Icon(Icons.brightness_auto_outlined, size: 17),
-            label: Text('Auto'),
-          ),
-          ButtonSegment(
-            value: ThemeMode.dark,
-            icon: Icon(Icons.dark_mode_outlined, size: 17),
-            label: Text('Escuro'),
-          ),
-        ],
-        selected: {controller.mode},
-        showSelectedIcon: false,
-        onSelectionChanged: (s) => controller.definir(s.first),
-      ),
-    );
-  }
-}
-
-class _BotaoIcone extends StatelessWidget {
-  const _BotaoIcone({
-    required this.icon,
-    required this.onTap,
-    required this.tooltip,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final String tooltip;
+class _BotaoTema extends StatelessWidget {
+  const _BotaoTema();
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: p.surface,
-            borderRadius: BorderRadius.circular(Radii.sm),
-            border: Border.all(color: p.border),
-          ),
-          child: Icon(icon, size: 18, color: p.textSecondary),
+    final tema = context.watch<ThemeController>();
+    final escuro = tema.isDark(context);
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        tema.alternar(context);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: p.surface,
+          borderRadius: BorderRadius.circular(Radii.group),
+          border: Border.all(color: p.border),
+        ),
+        child: Icon(
+          escuro ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+          size: 19,
+          color: p.textSecondary,
         ),
       ),
     );
   }
 }
 
-class _Sequencia extends StatelessWidget {
-  const _Sequencia({required this.dias});
-
-  final int dias;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: p.accentSoft,
-        borderRadius: BorderRadius.circular(Radii.sm),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.bolt_rounded, size: 15, color: p.accent),
-          const SizedBox(width: 3),
-          Text(
-            '$dias',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: p.accent,
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Cartas extends StatelessWidget {
-  const _Cartas({required this.saveCards});
+/// As três cartas como linhas, não como cartões espremidos.
+///
+/// Em linha cabe o nome e a explicação do que a carta faz — quem nunca usou
+/// entende sem precisar perguntar.
+class _GrupoCartas extends StatelessWidget {
+  const _GrupoCartas({required this.saveCards});
 
   final int saveCards;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final p = context.palette;
+
+    return InsetGroup(
+      header: 'Cartas de brincadeira',
+      footer: 'A carta Salva-Mãe/Pai volta toda segunda-feira.',
       children: [
-        Expanded(
-          child: _Carta(
-            icon: Icons.volunteer_activism_outlined,
-            title: 'Salva-Mãe/Pai',
-            sub: saveCards > 0 ? '$saveCards disponível' : 'usada',
-            enabled: saveCards > 0,
-            onTap: () => DonatePointsSheet.show(context),
+        InsetRow(
+          icon: Icons.volunteer_activism_outlined,
+          tint: p.accent,
+          title: 'Salva-Mãe / Salva-Pai',
+          subtitle: saveCards > 0
+              ? 'doe pontos — quem recebe leva o dobro'
+              : 'você já usou a desta semana',
+          value: saveCards > 0 ? '$saveCards' : null,
+          onTap: saveCards > 0 ? () => DonatePointsSheet.show(context) : null,
+        ),
+        InsetRow(
+          icon: Icons.local_fire_department_outlined,
+          tint: p.energy,
+          title: 'Desafio Impossível',
+          subtitle: 'mini-desafio relâmpago para o grupo',
+          onTap: () => PublishCardSheet.show(
+            context,
+            FeedPostType.impossibleChallenge,
           ),
         ),
-        const SizedBox(width: Space.md),
-        Expanded(
-          child: _Carta(
-            icon: Icons.local_fire_department_outlined,
-            title: 'Desafio',
-            sub: 'lançar',
-            onTap: () => PublishCardSheet.show(
-              context,
-              FeedPostType.impossibleChallenge,
-            ),
-          ),
-        ),
-        const SizedBox(width: Space.md),
-        Expanded(
-          child: _Carta(
-            icon: Icons.theater_comedy_outlined,
-            title: 'Punição',
-            sub: 'mico',
-            onTap: () =>
-                PublishCardSheet.show(context, FeedPostType.punishment),
-          ),
+        InsetRow(
+          icon: Icons.theater_comedy_outlined,
+          title: 'Punição Leve',
+          subtitle: 'a prenda de domingo de quem fez menos',
+          onTap: () => PublishCardSheet.show(context, FeedPostType.punishment),
         ),
       ],
     );
   }
 }
 
-class _Carta extends StatelessWidget {
-  const _Carta({
-    required this.icon,
-    required this.title,
-    required this.sub,
-    required this.onTap,
-    this.enabled = true,
-  });
+class _GrupoConta extends StatelessWidget {
+  const _GrupoConta({required this.streak});
 
-  final IconData icon;
-  final String title;
-  final String sub;
-  final VoidCallback onTap;
-  final bool enabled;
+  final int streak;
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final t = Theme.of(context).textTheme;
+    final session = context.read<SessionController>();
 
-    return Opacity(
-      opacity: enabled ? 1 : 0.45,
-      child: PressableCard(
-        onTap: enabled ? onTap : null,
-        padding: const EdgeInsets.symmetric(
-          horizontal: Space.md,
-          vertical: Space.lg,
+    return InsetGroup(
+      header: 'Você e a família',
+      children: [
+        InsetRow(
+          icon: Icons.timeline_rounded,
+          title: 'Meu progresso',
+          subtitle: streak > 0
+              ? 'sequência de $streak ${streak == 1 ? 'dia' : 'dias'}'
+              : 'histórico e últimos 7 dias',
+          trailing: streak > 0
+              ? Icon(Icons.local_fire_department_rounded,
+                  size: 18, color: p.energy)
+              : null,
+          onTap: () {
+            final id = session.user?.id;
+            if (id != null) MemberProfileScreen.open(context, id);
+          },
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 19, color: p.textSecondary),
-            const SizedBox(height: Space.md),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: t.labelSmall?.copyWith(color: p.textPrimary),
-            ),
-            const SizedBox(height: 1),
-            Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall),
-          ],
+        InsetRow(
+          icon: Icons.ios_share_rounded,
+          title: 'Convidar alguém',
+          subtitle: 'copiar o código da família',
+          onTap: () {
+            final code = session.family?.inviteCode ?? '';
+            Clipboard.setData(ClipboardData(text: code));
+            HapticFeedback.mediumImpact();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Código $code copiado')),
+            );
+          },
         ),
-      ),
+        InsetRow(
+          icon: Icons.logout_rounded,
+          tint: p.danger,
+          title: 'Sair da conta',
+          showChevron: false,
+          onTap: session.signOut,
+        ),
+      ],
     );
   }
 }

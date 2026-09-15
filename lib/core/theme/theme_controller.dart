@@ -3,8 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Modo claro, escuro ou o do sistema — lembrado entre sessões.
 ///
-/// Começa em `system`: o app respeita o que a pessoa já escolheu no celular
-/// em vez de impor um modo.
+/// Começa no CLARO. O escuro continua disponível no menu e a escolha é
+/// lembrada, mas quem abre o app pela primeira vez vê o modo claro.
 class ThemeController extends ChangeNotifier {
   ThemeController() {
     _carregar();
@@ -12,7 +12,7 @@ class ThemeController extends ChangeNotifier {
 
   static const String _key = 'theme_mode_v1';
 
-  ThemeMode _mode = ThemeMode.system;
+  ThemeMode _mode = ThemeMode.light;
   ThemeMode get mode => _mode;
 
   bool isDark(BuildContext context) {
@@ -28,7 +28,7 @@ class ThemeController extends ChangeNotifier {
       if (salvo == null) return;
       _mode = ThemeMode.values.firstWhere(
         (m) => m.name == salvo,
-        orElse: () => ThemeMode.system,
+        orElse: () => ThemeMode.light,
       );
       notifyListeners();
     } catch (_) {
