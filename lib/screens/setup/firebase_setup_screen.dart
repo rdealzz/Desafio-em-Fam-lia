@@ -69,12 +69,12 @@ class FirebaseSetupScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: context.palette.danger.withOpacity(0.10),
+                  color: context.palette.danger.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
                   startup.detail,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     color: context.palette.danger,
                     height: 1.4,
@@ -108,7 +108,7 @@ class FirebaseSetupScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: context.palette.accent.withOpacity(0.07),
+                color: context.palette.accent.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Text(
@@ -126,10 +126,13 @@ class FirebaseSetupScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Detalhes em docs/firebase_setup.md',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, color: context.palette.textSecondary),
+              style: TextStyle(
+                fontSize: 12.5,
+                color: context.palette.textSecondary,
+              ),
             ),
           ],
         ),
@@ -170,7 +173,7 @@ class _SetupStep extends StatelessWidget {
               Container(
                 width: 30,
                 height: 30,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: context.palette.accent,
                   shape: BoxShape.circle,
                 ),
@@ -189,7 +192,7 @@ class _SetupStep extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
                     color: context.palette.textPrimary,
@@ -201,7 +204,7 @@ class _SetupStep extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             body,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13.5,
               height: 1.4,
               color: context.palette.textSecondary,

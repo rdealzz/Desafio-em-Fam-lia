@@ -68,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Um cofre de pontos, quatro pessoas, um prêmio por semana.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
@@ -125,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
-                    value: _role,
+                    initialValue: _role,
                     decoration: const InputDecoration(
                       labelText: 'Quem é você na família?',
                       prefixIcon: Icon(Icons.family_restroom_outlined),

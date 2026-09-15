@@ -106,7 +106,7 @@ class FeedScreen extends StatelessWidget {
                     ),
                     // Reserva mais altura fora da tela: rolagem rápida não
                     // encontra item em branco esperando construir.
-                    cacheExtent: 1200,
+                    scrollCacheExtent: 1200,
                     itemCount: posts.length,
                     separatorBuilder: (_, __) => const SizedBox(height: Space.md),
                     itemBuilder: (context, i) {

@@ -31,7 +31,7 @@ class VaultProgressCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: SectionLabel('Cofre da semana')),
+              const Expanded(child: SectionLabel('Cofre da semana')),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: Space.sm,

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/palette.dart';
-import '../../core/theme/tokens.dart';
 import '../../services/app_exception.dart';
 import '../../services/family_service.dart';
 import '../../state/session_controller.dart';
@@ -55,7 +54,7 @@ class _JoinFamilyScreenState extends State<JoinFamilyScreen> {
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Crie a família ou entre com o código que alguém te mandou.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
