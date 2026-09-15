@@ -1,0 +1,50 @@
+name: Build web
+
+# Roda a cada push na main e sob demanda. O objetivo é ter um log legível do
+# que acontece na compilação — a Vercel é uma caixa preta de fora dela.
+on:
+  push:
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Versão
+        run: flutter --version
+
+      - name: Dependências
+        run: flutter pub get
+
+      # Aqui é onde erro de compilação aparece com arquivo e linha.
+      - name: Análise estática
+        run: flutter analyze --no-fatal-infos
+
+      - name: Testes
+        run: flutter test
+
+      - name: Build web (modo demonstração)
+        run: flutter build web --release --dart-define=DEMO_MODE=true
+
+      - name: Conferir a saída
+        run: |
+          test -f build/web/index.html || { echo "index.html não gerado"; exit 1; }
+          echo "Arquivos gerados:"
+          ls -la build/web
+          du -sh build/web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: build/web
+          retention-days: 7
