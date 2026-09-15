@@ -109,7 +109,9 @@ class AuthService {
     if (erroUsuario != null) throw AppException(erroUsuario);
 
     if (password.length < minSenha) {
-      throw AppException('A senha precisa de pelo menos $minSenha caracteres.');
+      throw const AppException(
+        'A senha precisa de pelo menos $minSenha caracteres.',
+      );
     }
     if (name.trim().length < 2) {
       throw const AppException('Digite seu nome.');
@@ -183,7 +185,9 @@ class AuthService {
       throw const AppException('Você precisa estar conectado.');
     }
     if (novaSenha.length < minSenha) {
-      throw AppException('A senha precisa de pelo menos $minSenha caracteres.');
+      throw const AppException(
+        'A senha precisa de pelo menos $minSenha caracteres.',
+      );
     }
     try {
       // Reautentica antes: o Firebase exige sessão recente para trocar senha.

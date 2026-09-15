@@ -34,7 +34,7 @@ class Radii {
   /// Grupo de lista embutida (estilo Ajustes do iOS).
   static const double group = 12;
 
-  static const BorderRadius card = BorderRadius.all(Radius.circular(lg));
+  /// Folha deslizante — só o topo arredondado.
   static const BorderRadius sheet =
       BorderRadius.vertical(top: Radius.circular(xl));
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/palette.dart';
-import '../core/theme/tokens.dart';
 import '../core/utils/formatters.dart';
 import '../models/app_user.dart';
 import 'avatar_bubble.dart';
@@ -26,7 +25,7 @@ class MembersGroup extends StatelessWidget {
     final t = Theme.of(context).textTheme;
 
     if (members.isEmpty) {
-      return InsetGroup(
+      return const InsetGroup(
         header: 'A turma',
         children: [
           InsetRow(
