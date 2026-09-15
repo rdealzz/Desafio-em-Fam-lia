@@ -380,6 +380,21 @@ class ActivityService {
     return 1;
   }
 
+  /// Histórico de um integrante — alimenta a tela "Meu Progresso".
+  ///
+  /// 60 registros cobrem com folga as últimas semanas; o strip de 7 dias e as
+  /// estatísticas são calculados em cima desta mesma lista, sem consulta extra.
+  Stream<List<ActivityLog>> watchUserLogs(String userId, {int limit = 60}) {
+    return _refs.activityLogs
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) => ActivityLog.fromMap(doc.id, doc.data()))
+            .toList());
+  }
+
   /// Últimos registros da família (histórico da Tela 1).
   Stream<List<ActivityLog>> watchRecentLogs(String familyId, {int limit = 30}) {
     return _refs.activityLogs

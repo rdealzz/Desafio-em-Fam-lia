@@ -51,6 +51,7 @@ desbloqueia sozinho e vira um aviso no mural.
 | **1. A Casa** (dashboard) | `lib/screens/home/home_screen.dart` | Barra de progresso do cofre, avatares dos 4 com status do dia, botão grande "Registrar Atividade", prêmios e cartas |
 | **2. Registrar Atividade** | `lib/screens/activity/register_activity_screen.dart` | Ícones grandes por modalidade, duração, passos, foto comprovante, preview de pontos ao vivo |
 | **3. Mural do Deboche & Apoio** | `lib/screens/feed/feed_screen.dart` | Feed privado dos 4, fotos, tempo e pontos, reações por emoji, cartas publicadas |
+| **Meu Progresso** | `lib/screens/profile/member_profile_screen.dart` | Histórico individual, strip dos últimos 7 dias, sequência e fatia do cofre. Abre ao tocar num avatar do dashboard |
 
 ---
 
@@ -80,7 +81,7 @@ lib/
 │   └── health_service.dart    # ponte para HealthKit / Google Fit
 │
 ├── state/session_controller.dart  # usuário + família + integrantes em tempo real
-├── screens/                   # as 3 telas + login
+├── screens/                   # as 3 telas + login + perfil
 └── widgets/                   # cofre, avatares, prêmios, post do feed, cartas
 
 scripts/create_firebase_project.sh  # cria o projeto Firebase do zero

@@ -14,12 +14,25 @@ class AppColors {
   static const Color ink = Color(0xFF1C1B2E);
   static const Color inkSoft = Color(0xFF6E6B8A);
 
-  /// Cor de destaque de cada modalidade (mesma ordem de `ActivityType`).
+  /// Cor de identidade de cada modalidade (mesma ordem de `ActivityType`).
+  ///
+  /// Paleta validada para daltonismo com `scripts/validate_palette.js` da
+  /// skill dataviz, no critério mais rígido (todos os pares, não só os
+  /// adjacentes — as 4 aparecem juntas na grade 2x2).
+  ///
+  /// A paleta anterior (verde/vermelho/laranja) reprovava: vermelho e verde
+  /// ficavam com ΔE 2,5 em deuteranopia — o daltonismo mais comum — e quem
+  /// tem não separava "Academia" de "Alongamento". Laranja e vermelho tinham
+  /// ΔE 9,3 mesmo com visão plena.
+  ///
+  /// Nesta, o pior par fica em ΔE 7,7 (CVD) e 20,8 (visão normal). O 7,7 está
+  /// na faixa que só vale com codificação secundária — e existe: toda
+  /// modalidade aparece sempre com emoji e rótulo, nunca cor sozinha.
   static const Map<String, Color> activity = {
-    'walk': Color(0xFF3DA5FF),
-    'stretching': Color(0xFF2ECC71),
-    'gym': Color(0xFFFF6B6B),
-    'home_workout': Color(0xFFFF8A3D),
+    'walk': Color(0xFF3DA5FF), // azul
+    'stretching': Color(0xFF0CA678), // teal
+    'gym': Color(0xFFF08C00), // laranja
+    'home_workout': Color(0xFFB15BD8), // roxo
   };
 
   static const LinearGradient vaultGradient = LinearGradient(

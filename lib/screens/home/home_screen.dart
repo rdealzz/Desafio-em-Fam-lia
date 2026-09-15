@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/feed_post.dart';
 import '../../state/session_controller.dart';
+import '../profile/member_profile_screen.dart';
 import '../../widgets/donate_points_sheet.dart';
 import '../../widgets/member_status_row.dart';
 import '../../widgets/publish_card_sheet.dart';
@@ -98,7 +99,11 @@ class HomeScreen extends StatelessWidget {
                 trailing: '${family.memberIds.length}/4',
               ),
               const SizedBox(height: 12),
-              MemberStatusRow(members: session.members),
+              MemberStatusRow(
+                members: session.members,
+                onMemberTap: (member) =>
+                    MemberProfileScreen.open(context, member.id),
+              ),
               const SizedBox(height: 26),
 
               _SectionTitle(
@@ -192,6 +197,16 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 22),
+            OutlinedButton.icon(
+              onPressed: () {
+                final myId = session.user?.id;
+                Navigator.of(sheetContext).pop();
+                if (myId != null) MemberProfileScreen.open(context, myId);
+              },
+              icon: const Icon(Icons.timeline),
+              label: const Text('Meu progresso'),
+            ),
+            const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: () {
                 Navigator.of(sheetContext).pop();
