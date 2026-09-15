@@ -5,7 +5,6 @@ import '../core/utils/formatters.dart';
 import '../models/app_user.dart';
 import 'avatar_bubble.dart';
 import 'ui/inset_group.dart';
-import 'ui/primitives.dart';
 
 /// Os integrantes num grupo só, com a fatia de cada um.
 class MembersGroup extends StatelessWidget {
@@ -38,10 +37,6 @@ class MembersGroup extends StatelessWidget {
       );
     }
 
-    final maior = members
-        .map((m) => m.pointsThisWeek)
-        .fold<int>(1, (a, b) => b > a ? b : a);
-
     return InsetGroup(
       header: 'A turma esta semana',
       trailing: Text('$totalMembros de 4', style: t.bodySmall),
@@ -58,7 +53,6 @@ class MembersGroup extends StatelessWidget {
             onTap: onMemberTap == null ? null : () => onMemberTap!(m),
             trailing: _Fatia(
               pontos: m.pointsThisWeek,
-              fracao: m.pointsThisWeek / maior,
               ativo: m.isActiveToday,
             ),
           ),
@@ -67,15 +61,14 @@ class MembersGroup extends StatelessWidget {
   }
 }
 
+/// Pontos da semana do integrante.
+///
+/// Só o número: a barrinha que havia aqui lia como um sublinhado solto ao
+/// lado do valor, e a comparação entre membros já aparece na ordem da lista.
 class _Fatia extends StatelessWidget {
-  const _Fatia({
-    required this.pontos,
-    required this.fracao,
-    required this.ativo,
-  });
+  const _Fatia({required this.pontos, required this.ativo});
 
   final int pontos;
-  final double fracao;
   final bool ativo;
 
   @override
@@ -83,26 +76,11 @@ class _Fatia extends StatelessWidget {
     final p = context.palette;
     final t = Theme.of(context).textTheme;
 
-    return SizedBox(
-      width: 64,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            Formatters.points(pontos),
-            style: t.labelLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: ativo ? p.accent : p.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 5),
-          ProgressBarThin(
-            value: fracao,
-            height: 3,
-            color: ativo ? p.accent : p.borderStrong,
-          ),
-        ],
+    return Text(
+      Formatters.points(pontos),
+      style: t.labelLarge?.copyWith(
+        fontWeight: FontWeight.w800,
+        color: ativo ? p.accent : p.textSecondary,
       ),
     );
   }

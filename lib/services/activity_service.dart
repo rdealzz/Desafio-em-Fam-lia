@@ -229,8 +229,8 @@ class ActivityService {
         'currentStreak': newStreak,
         'longestStreak': newLongest,
         'lastActivityAt': Timestamp.fromDate(at),
-        'statusMessage':
-            '${type.label} de $durationMinutes min — +${breakdown.total} pts',
+        // Curto de propósito: entra como subtítulo de uma linha na lista.
+        'statusMessage': '${type.label} · $durationMinutes min',
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
@@ -252,9 +252,11 @@ class ActivityService {
           authorAvatar: currentUser.avatarEmoji,
           authorPhotoUrl: currentUser.photoUrl,
           type: FeedPostType.activity,
+          // Sem emoji no texto: o cartão do mural já mostra o ícone da
+          // modalidade, e emoji vira quadradinho no navegador.
           message: note.isNotEmpty
               ? note
-              : '${type.emoji} ${type.label} — $durationMinutes min',
+              : '${type.label} — $durationMinutes min',
           photoUrl: photoUrl,
           points: breakdown.total,
           durationMinutes: durationMinutes,
@@ -284,7 +286,7 @@ class ActivityService {
             authorName: family.name,
             authorAvatar: '🎉',
             type: FeedPostType.rewardUnlocked,
-            message: '${reward.emoji} Prêmio liberado: ${reward.title}! '
+            message: 'Prêmio liberado: ${reward.title}! '
                 'O cofre chegou a ${reward.requiredPoints} pontos.',
             metadata: {'rewardId': reward.id},
           ).toMap(),
@@ -429,7 +431,7 @@ class ActivityService {
           type: FeedPostType.saveCard,
           message: message.isNotEmpty
               ? message
-              : '🦸 Carta Salva-Mãe/Pai! ${donorUser.firstName} treinou em '
+              : 'Carta Salva-Mãe/Pai! ${donorUser.firstName} treinou em '
                   'dobro e doou $amount pts — ${recipient.firstName} recebeu '
                   '$received pts e manteve a sequência.',
           points: received,

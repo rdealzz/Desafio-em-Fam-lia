@@ -168,7 +168,9 @@ class _InsetRowState extends State<InsetRow> {
                     const SizedBox(height: 2),
                     Text(
                       widget.subtitle!,
-                      maxLines: 2,
+                      // Uma linha só: subtítulo que quebra deixa as linhas
+                      // com alturas diferentes e a lista fica desalinhada.
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: t.bodySmall,
                     ),

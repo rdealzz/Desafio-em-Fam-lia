@@ -33,7 +33,7 @@ class DemoData {
     longestStreak: 12,
     saveCards: 1,
     lastActivityAt: _horasAtras(3),
-    statusMessage: 'Corrida de 30 min — +150 pts',
+    statusMessage: 'Corrida · 30 min',
   );
 
   static final List<AppUser> membros = [
@@ -51,7 +51,7 @@ class DemoData {
       longestStreak: 19,
       saveCards: 1,
       lastActivityAt: _horasAtras(6),
-      statusMessage: 'Caminhada de 45 min — +100 pts',
+      statusMessage: 'Caminhada · 45 min',
     ),
     AppUser(
       id: 'demo_pai',
@@ -81,7 +81,7 @@ class DemoData {
       longestStreak: 10,
       saveCards: 0,
       lastActivityAt: _horasAtras(20),
-      statusMessage: 'Alongamento de 20 min — +100 pts',
+      statusMessage: 'Alongamento · 20 min',
     ),
   ];
 
@@ -172,10 +172,9 @@ class DemoData {
           authorName: 'Rosa Maria',
           authorAvatar: '👩',
           type: FeedPostType.activity,
-          message: '🚶 Caminhada — 45 min. Fui até a padaria e voltei andando!',
+          message: 'Caminhada — 45 min. Fui até a padaria e voltei andando!',
           points: 142,
           durationMinutes: 45,
-          photoUrl: 'https://picsum.photos/seed/caminhada/600/450',
           metadata: const {'activityType': 'walk', 'steps': 4200, 'streak': 7},
           reactions: const {
             'fire': ['demo_filho', 'demo_pai'],
@@ -190,7 +189,7 @@ class DemoData {
           authorName: 'Rafael',
           authorAvatar: '😎',
           type: FeedPostType.activity,
-          message: '🏃 Corrida — 30 min',
+          message: 'Corrida — 30 min',
           points: 150,
           durationMinutes: 30,
           metadata: {
@@ -211,7 +210,7 @@ class DemoData {
           authorName: 'Júlia',
           authorAvatar: '🦸',
           type: FeedPostType.impossibleChallenge,
-          message: 'Quem fizer 10 polichinelos em vídeo agora ganha +50 pts 🔥',
+          message: 'Quem fizer 10 polichinelos em vídeo agora ganha +50 pts',
           reactions: const {
             'laugh': ['demo_filho', 'demo_mae', 'demo_pai'],
           },
@@ -224,7 +223,7 @@ class DemoData {
           authorName: 'Família Silva',
           authorAvatar: '🎉',
           type: FeedPostType.rewardUnlocked,
-          message: '🍕 Prêmio liberado: Noite da Pizza! '
+          message: 'Prêmio liberado: Noite da Pizza! '
               'O cofre chegou a 3000 pontos.',
           reactions: const {
             'heart': ['demo_mae', 'demo_nora', 'demo_filho'],
@@ -238,7 +237,7 @@ class DemoData {
           authorName: 'Rafael',
           authorAvatar: '😎',
           type: FeedPostType.saveCard,
-          message: '🦸 Carta Salva-Mãe/Pai! Rafael treinou em dobro e doou '
+          message: 'Carta Salva-Mãe/Pai! Rafael treinou em dobro e doou '
               '100 pts — Antônio recebeu 200 pts e manteve a sequência.',
           points: 200,
           metadata: const {'toUserName': 'Antônio', 'donatedPoints': 100},
@@ -254,10 +253,9 @@ class DemoData {
           authorName: 'Antônio',
           authorAvatar: '🧔',
           type: FeedPostType.activity,
-          message: '🚴 Ciclismo — 90 min. Pedalei até a represa 🚲',
+          message: 'Ciclismo — 90 min. Pedalei até a represa',
           points: 450,
           durationMinutes: 90,
-          photoUrl: 'https://picsum.photos/seed/ciclismo/600/450',
           metadata: const {'activityType': 'cycling'},
           reactions: const {
             'fire': ['demo_mae'],

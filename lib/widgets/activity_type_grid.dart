@@ -108,7 +108,7 @@ class _Cartao extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  tipo.label,
+                  tipo.short,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: t.labelLarge?.copyWith(

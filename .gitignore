@@ -37,3 +37,6 @@ ui-debug.log
 
 # Build web
 build/
+
+# Servidor local de pré-visualização
+build-web.log

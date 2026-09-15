@@ -79,6 +79,7 @@ enum ActivityType {
     group: ActivityGroup.home,
     blockMinutes: 20,
     blockPoints: 100,
+    shortLabel: 'Exercício',
   ),
   stretching(
     id: 'stretching',
@@ -97,7 +98,14 @@ enum ActivityType {
     required this.blockMinutes,
     required this.blockPoints,
     this.tracksSteps = false,
-  });
+    String? shortLabel,
+  }) : _shortLabel = shortLabel;
+
+  final String? _shortLabel;
+
+  /// Nome curto para onde o espaço é apertado (a grade de escolha).
+  /// "Exercício em Casa" não cabe num cartão de meia largura.
+  String get short => _shortLabel ?? label;
 
   /// Identificador persistido no Firestore. Nunca mude sem migrar os dados.
   final String id;

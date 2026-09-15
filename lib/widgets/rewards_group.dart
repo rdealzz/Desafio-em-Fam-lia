@@ -6,6 +6,7 @@ import '../core/utils/formatters.dart';
 import '../models/reward.dart';
 import 'ui/inset_group.dart';
 import 'ui/primitives.dart';
+import 'ui/reaction_icons.dart';
 
 /// Prêmios do fim de semana, em ordem de quanto falta.
 class RewardsGroup extends StatelessWidget {
@@ -44,7 +45,11 @@ class RewardsGroup extends StatelessWidget {
                 borderRadius: BorderRadius.circular(Radii.group),
               ),
               alignment: Alignment.center,
-              child: Text(r.emoji, style: const TextStyle(fontSize: 17)),
+              child: Icon(
+                iconForReward(r.emoji),
+                size: 18,
+                color: r.unlocked ? p.accent : p.textSecondary,
+              ),
             ),
             title: r.title,
             subtitle: r.unlocked

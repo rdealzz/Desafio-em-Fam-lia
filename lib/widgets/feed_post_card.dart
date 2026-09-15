@@ -6,7 +6,10 @@ import '../core/theme/tokens.dart';
 import '../core/utils/firestore_utils.dart';
 import '../core/utils/formatters.dart';
 import '../models/feed_post.dart';
+import 'avatar_bubble.dart';
+import 'ui/feed_photo.dart';
 import 'ui/primitives.dart';
+import 'ui/reaction_icons.dart';
 
 /// Publicação do mural.
 ///
@@ -61,8 +64,11 @@ class FeedPostCard extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      post.authorAvatar,
-                      style: const TextStyle(fontSize: 15),
+                      AvatarBubble.iniciais(post.authorName),
+                      style: t.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: p.textSecondary,
+                      ),
                     ),
                   ),
                   const SizedBox(width: Space.md),
@@ -145,21 +151,7 @@ class FeedPostCard extends StatelessWidget {
               ),
             if (temFoto) ...[
               const SizedBox(height: Space.md),
-              AspectRatio(
-                aspectRatio: 4 / 3,
-                child: Image.network(
-                  post.photoUrl!,
-                  fit: BoxFit.cover,
-                  // Decodifica em ~2x a largura de tela, não no tamanho
-                  // original da câmera: corta memória e trabalho de GPU.
-                  cacheWidth: 900,
-                  loadingBuilder: (context, child, progress) => progress == null
-                      ? child
-                      : ColoredBox(color: p.surfaceSunken),
-                  errorBuilder: (_, __, ___) =>
-                      ColoredBox(color: p.surfaceSunken),
-                ),
-              ),
+              FeedPhoto(url: post.photoUrl!),
             ],
             Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -174,7 +166,7 @@ class FeedPostCard extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(right: Space.sm),
                       child: _Reacao(
-                        emoji: e.value,
+                        icone: iconForReaction(e.key),
                         count: post.reactionCount(e.key),
                         ativa: post.hasReacted(e.key, currentUserId),
                         onTap: () {
@@ -202,13 +194,13 @@ class FeedPostCard extends StatelessWidget {
 
 class _Reacao extends StatelessWidget {
   const _Reacao({
-    required this.emoji,
+    required this.icone,
     required this.count,
     required this.ativa,
     required this.onTap,
   });
 
-  final String emoji;
+  final IconData icone;
   final int count;
   final bool ativa;
   final VoidCallback onTap;
@@ -233,7 +225,7 @@ class _Reacao extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 13)),
+            Icon(icone, size: 15, color: ativa ? p.accent : p.textSecondary),
             if (count > 0) ...[
               const SizedBox(width: 4),
               Text(
