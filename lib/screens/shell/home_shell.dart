@@ -1,5 +1,10 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../services/activity_sync_service.dart';
+import '../../state/session_controller.dart';
 import '../activity/register_activity_screen.dart';
 import '../feed/feed_screen.dart';
 import '../home/home_screen.dart';
@@ -12,8 +17,47 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   int _index = 0;
+  Timer? _syncTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Ao abrir: tenta subir o que ficou parado da última vez sem internet.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sincronizar());
+    // Enquanto o app está aberto: cobre o caso da internet voltar sozinha,
+    // sem ninguém tocar em nada.
+    _syncTimer = Timer.periodic(
+      const Duration(minutes: 2),
+      (_) => _sincronizar(),
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Voltou do bolso já no wi-fi de casa: momento mais provável de dar certo.
+    if (state == AppLifecycleState.resumed) _sincronizar();
+  }
+
+  void _sincronizar() {
+    if (!mounted) return;
+    final sync = context.read<ActivitySyncService>();
+    if (!sync.hasPending && sync.pendingCount == 0) {
+      // Primeira chamada ainda não leu o disco; refresh resolve.
+      sync.refresh();
+    }
+    final user = context.read<SessionController>().user;
+    if (user != null) sync.drain(user);
+  }
+
+  @override
+  void dispose() {
+    _syncTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   void _goTo(int index) => setState(() => _index = index);
 

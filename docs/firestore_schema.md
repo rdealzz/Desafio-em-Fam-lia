@@ -120,13 +120,23 @@ os logs da semana.
   "note": "caminhada com a vizinha",
   "weekId": "2026-W37",
   "source": "manual",
-  "createdAt": "2026-09-14T08:12:00Z"
+  "createdAt": "2026-09-14T08:12:00Z",
+  "syncedAt": "2026-09-14T08:12:03Z"
 }
 ```
 
+| Campo | Relógio | Observação |
+|---|---|---|
+| `createdAt` | do aparelho | Quando a atividade foi feita. Numa pendência offline é a hora do exercício, não a da sincronização. |
+| `syncedAt` | **do servidor** | `FieldValue.serverTimestamp()`. A regra exige que seja igual a `request.time`, e que `createdAt` caia entre 48 h atrás e 5 min à frente — é o que impede atrasar o relógio do celular para salvar uma sequência. |
+
+O id do documento vem do aparelho quando o registro passou pela fila offline
+(`pend_<timestamp>_<aleatório>`), para o reenvio cair no mesmo documento e a
+transação detectar que já foi aplicado.
+
 `type` ∈ `walk` | `running` | `cycling` | `gym` | `martial_arts` |
 `home_workout` | `stretching`
-`source` ∈ `manual` | `health` (HealthKit / Google Fit)
+`source` ∈ `manual` | `offline_queue` | `health` (HealthKit / Google Fit)
 
 Dart: `lib/models/activity_log.dart`
 

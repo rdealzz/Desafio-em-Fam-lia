@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
+import '../core/utils/firestore_utils.dart';
 import '../core/utils/formatters.dart';
 import '../models/feed_post.dart';
 
@@ -131,6 +132,14 @@ class FeedPostCard extends StatelessWidget {
                       icon: Icons.local_fire_department,
                       label: '${post.metadata['streak']} dias seguidos',
                     ),
+                  // Registro que veio da fila offline aparece marcado, com a
+                  // hora real do exercício. Quem vê o mural entende que não
+                  // acabou de acontecer — e ninguém precisa perguntar.
+                  if (post.metadata['offlineSync'] == true)
+                    _Chip(
+                      icon: Icons.cloud_done_outlined,
+                      label: _offlineLabel(post),
+                    ),
                 ],
               ),
             ),
@@ -210,6 +219,14 @@ class FeedPostCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// "feito ontem" / "feito há 3 h" — a hora que vale é a do exercício.
+  static String _offlineLabel(FeedPost post) {
+    final raw = post.metadata['performedAt'];
+    final performedAt = FirestoreUtils.toDateTime(raw);
+    if (performedAt == null) return 'registrado offline';
+    return 'feito ${Formatters.timeAgo(performedAt)}';
   }
 
   static Color _accentFor(FeedPostType type) {

@@ -9,11 +9,13 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/join_family_screen.dart';
 import 'screens/shell/home_shell.dart';
 import 'services/activity_service.dart';
+import 'services/activity_sync_service.dart';
 import 'services/auth_service.dart';
 import 'services/family_service.dart';
 import 'services/feed_service.dart';
 import 'services/firestore_refs.dart';
 import 'services/health_service.dart';
+import 'services/pending_activity_store.dart';
 import 'services/storage_service.dart';
 import 'state/session_controller.dart';
 
@@ -45,6 +47,15 @@ class DesafioEmFamiliaApp extends StatelessWidget {
         ),
         ProxyProvider2<FirestoreRefs, StorageService, ActivityService>(
           update: (_, refs, storage, __) => ActivityService(refs, storage),
+        ),
+        Provider<PendingActivityStore>(create: (_) => PendingActivityStore()),
+        ChangeNotifierProxyProvider2<ActivityService, PendingActivityStore,
+            ActivitySyncService>(
+          create: (context) => ActivitySyncService(
+            context.read<ActivityService>(),
+            context.read<PendingActivityStore>(),
+          ),
+          update: (_, __, ___, previous) => previous!,
         ),
         ProxyProvider2<FirestoreRefs, FamilyService, AuthService>(
           update: (_, refs, familyService, __) =>

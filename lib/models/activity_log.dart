@@ -21,6 +21,7 @@ class ActivityLog {
     this.weekId = '',
     this.source = 'manual',
     this.createdAt,
+    this.syncedAt,
   });
 
   final String id;
@@ -47,7 +48,31 @@ class ActivityLog {
   /// `manual` ou `health` (HealthKit / Google Fit).
   final String source;
 
+  /// Quando a atividade foi feita, segundo o aparelho.
   final DateTime? createdAt;
+
+  /// Quando o registro chegou ao servidor, segundo o relógio DO SERVIDOR.
+  ///
+  /// Guardar os dois lados é o que permite ver um registro atrasado — e é a
+  /// hora do servidor que as regras validam, não a do aparelho.
+  final DateTime? syncedAt;
+
+  /// Veio da fila offline: ficou um tempo guardado antes de subir.
+  bool get isOfflineSync {
+    final feito = createdAt;
+    final chegou = syncedAt;
+    if (feito == null || chegou == null) return false;
+    return chegou.difference(feito) > const Duration(minutes: 10);
+  }
+
+  /// Quanto tempo o registro esperou para subir.
+  Duration? get syncDelay {
+    final feito = createdAt;
+    final chegou = syncedAt;
+    if (feito == null || chegou == null) return null;
+    final atraso = chegou.difference(feito);
+    return atraso.isNegative ? Duration.zero : atraso;
+  }
 
   factory ActivityLog.fromMap(String id, Map<String, dynamic> map) {
     return ActivityLog(
@@ -66,6 +91,7 @@ class ActivityLog {
       weekId: FirestoreUtils.toStringValue(map['weekId']),
       source: FirestoreUtils.toStringValue(map['source'], fallback: 'manual'),
       createdAt: FirestoreUtils.toDateTime(map['createdAt']),
+      syncedAt: FirestoreUtils.toDateTime(map['syncedAt']),
     );
   }
 
@@ -84,5 +110,6 @@ class ActivityLog {
         'weekId': weekId,
         'source': source,
         'createdAt': createdAt,
+        'syncedAt': syncedAt,
       };
 }

@@ -360,6 +360,23 @@ class _LogTile extends StatelessWidget {
                     color: AppColors.inkSoft,
                   ),
                 ),
+                if (log.isOfflineSync) ...[
+                  const SizedBox(height: 3),
+                  const Row(
+                    children: [
+                      Icon(Icons.cloud_done_outlined,
+                          size: 12, color: AppColors.inkSoft),
+                      SizedBox(width: 4),
+                      Text(
+                        'registrado offline',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.inkSoft,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

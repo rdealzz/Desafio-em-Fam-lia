@@ -24,6 +24,10 @@ dependencies:
   image_picker: ^1.1.2
   intl: ^0.19.0
 
+  # Fila offline: registros ficam no disco até haver internet
+  shared_preferences: ^2.3.2
+  path_provider: ^2.1.4
+
   # Contador de passos (HealthKit / Google Fit).
   # Descomente quando for plugar o HealthService real (ver lib/services/health_service.dart).
   # health: ^11.1.1

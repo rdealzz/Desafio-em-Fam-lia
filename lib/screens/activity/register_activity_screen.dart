@@ -7,7 +7,9 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/activity_type.dart';
+import '../../models/app_user.dart';
 import '../../services/activity_service.dart';
+import '../../services/activity_sync_service.dart';
 import '../../services/app_exception.dart';
 import '../../services/health_service.dart';
 import '../../services/points_calculator.dart';
@@ -346,6 +348,10 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
     final user = context.read<SessionController>().user;
     if (user == null) return;
 
+    // Marcada agora, antes de qualquer espera de rede: se o registro cair na
+    // fila, o que vale é a hora em que a pessoa terminou o exercício.
+    final performedAt = DateTime.now();
+
     setState(() => _saving = true);
 
     try {
@@ -356,6 +362,7 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
             steps: _steps,
             photo: _photo,
             note: _noteController.text.trim(),
+            performedAt: performedAt,
           );
 
       if (!mounted) return;
@@ -377,16 +384,90 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
         SnackBar(content: Text(e.message), backgroundColor: AppColors.danger),
       );
     } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível registrar. Tente de novo.'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      // Chegou aqui depois de a regra de negócio passar, então quase sempre é
+      // rede. Guardar é melhor que perder: o exercício já foi feito.
+      await _guardarParaDepois(user, performedAt);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// Guarda o registro na fila local e limpa a tela como se tivesse enviado —
+  /// da perspectiva de quem treinou, está registrado; só ainda não subiu.
+  Future<void> _guardarParaDepois(AppUser user, DateTime performedAt) async {
+    final note = _noteController.text.trim();
+    final photo = _photo;
+    final type = _type;
+    final minutes = _minutes;
+    final steps = _steps;
+
+    try {
+      await context.read<ActivitySyncService>().enqueue(
+            user: user,
+            type: type,
+            durationMinutes: minutes,
+            steps: steps,
+            photo: photo,
+            note: note,
+            performedAt: performedAt,
+          );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível registrar nem guardar. Tente de novo.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _photo = null;
+      _steps = 0;
+      _minutes = 30;
+      _stepsController.clear();
+      _noteController.clear();
+    });
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('📥', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            const Text(
+              'Guardado no celular',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.ink,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Sem internet agora. ${type.emoji} ${type.label} de '
+              '${Formatters.duration(minutes)} entra no cofre assim que a '
+              'conexão voltar — você não precisa fazer mais nada.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.inkSoft, height: 1.45),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Entendi'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showSuccess(ActivityRegistrationResult result) {

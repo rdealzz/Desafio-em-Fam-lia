@@ -104,6 +104,61 @@ storage.rules
 test/                          # testes das regras de pontuação e da semana
 ```
 
+### Funciona sem internet
+
+Registrar exige internet: a transação do Firestore precisa de ida ao servidor,
+e a foto precisa subir. Quem caminha num parque sem sinal não pode ficar sem
+registrar — então há uma fila local.
+
+```
+tenta enviar na hora ──┬── deu certo ──▶ pontos no cofre, comemoração na tela
+                       │
+                       └── falhou por rede ──▶ guarda no disco do celular
+                                                     │
+                                    abrir o app ─────┤
+                                 voltar do bolso ────┼──▶ sobe sozinho
+                                 a cada 2 minutos ───┤
+                                   "tentar agora" ───┘
+```
+
+O caminho normal segue instantâneo — a fila é só o plano B. Erro de regra
+(sem foto, tempo insuficiente) **não** entra na fila: tentar de novo daria o
+mesmo erro para sempre.
+
+Três detalhes que fazem a diferença entre funcionar e parecer que funciona:
+
+- **A foto é copiada para a pasta do app** antes de entrar na fila. A foto do
+  `image_picker` vive em cache temporário, que o sistema apaga quando quer —
+  sem a cópia, o registro chegaria sem a prova que o app exige.
+- **O id do documento é sorteado no celular**, não no servidor. Se o app morrer
+  entre gravar e limpar a fila, o reenvio cai no mesmo documento e a guarda de
+  idempotência devolve o resultado anterior em vez de creditar em dobro.
+- **Pendência vence em 48 h.** Passou disso, o cofre daquela semana já fechou;
+  insistir só geraria confusão.
+
+O dashboard mostra o que está esperando, com um aviso explícito de **não
+registrar de novo** — é assim que os pontos contariam em dobro na prática.
+
+### A hora que vale é a do servidor
+
+O relógio do celular pode ser mudado. Sem cuidado, bastaria atrasar a data para
+"salvar" uma sequência perdida — justamente a graça de ter sequência.
+
+Por isso o registro guarda **os dois lados**:
+
+| Campo | Relógio | Para quê |
+|---|---|---|
+| `createdAt` | do aparelho | quando a atividade foi feita |
+| `syncedAt` | **do servidor** | quando o registro chegou |
+
+E a regra do Firestore compara a hora declarada com `request.time` — o relógio
+do servidor, que o app não tem como forjar. Um registro só passa se couber
+entre **48 h atrás e 5 minutos à frente**. Fora disso, o servidor recusa.
+
+Registro que passou pela fila aparece marcado no mural e no histórico, com a
+hora real do exercício (*"feito ontem"*). Numa família, ver que chegou atrasado
+resolve mais que qualquer regra.
+
 ### Por que as escritas passam por transação
 
 Quatro pessoas podem registrar atividade ao mesmo tempo. Se cada app lesse o

@@ -28,6 +28,23 @@ service cloud.firestore {
              .data.get('requirePhotoProof', true) == true;
     }
 
+    // `request.time` é o relógio do SERVIDOR no momento da escrita — o app não
+    // tem como forjar. Um registro só é aceito se a hora declarada couber numa
+    // janela plausível em volta dela.
+    //
+    // Sem isso, bastava atrasar o relógio do celular para "salvar" uma
+    // sequência perdida, que é justamente a graça de ter sequência.
+    //
+    // 5 min de folga para frente absorvem desencontro normal de relógio;
+    // 48 h para trás é o mesmo prazo da fila offline.
+    function plausibleTimestamp() {
+      return request.resource.data.createdAt is timestamp &&
+             request.resource.data.createdAt <=
+               request.time + duration.value(5, 'm') &&
+             request.resource.data.createdAt >=
+               request.time - duration.value(48, 'h');
+    }
+
     function hasPhotoProof() {
       return request.resource.data.photoUrl is string &&
              request.resource.data.photoUrl.size() > 0;
@@ -93,7 +110,12 @@ service cloud.firestore {
         // A foto comprovante é regra de integridade, não só de interface:
         // sem ela o registro é recusado pelo servidor.
         (hasPhotoProof() ||
-         !familyRequiresPhoto(request.resource.data.familyId));
+         !familyRequiresPhoto(request.resource.data.familyId)) &&
+        // A hora declarada tem de bater com o relógio do servidor.
+        plausibleTimestamp() &&
+        // Quando chegou, na hora do servidor: é o contraponto ao que o
+        // aparelho declara, e o que revela um registro atrasado.
+        request.resource.data.syncedAt == request.time;
 
       // Histórico é imutável: correções entram como novo registro.
       allow update, delete: if false;

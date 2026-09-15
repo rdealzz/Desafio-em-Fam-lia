@@ -9,6 +9,7 @@ import '../../state/session_controller.dart';
 import '../profile/member_profile_screen.dart';
 import '../../widgets/donate_points_sheet.dart';
 import '../../widgets/member_status_row.dart';
+import '../../widgets/pending_sync_banner.dart';
 import '../../widgets/publish_card_sheet.dart';
 import '../../widgets/rewards_section.dart';
 import '../../widgets/vault_progress_card.dart';
@@ -74,6 +75,8 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
+
+              const PendingSyncBanner(),
 
               VaultProgressCard(family: family),
               const SizedBox(height: 24),

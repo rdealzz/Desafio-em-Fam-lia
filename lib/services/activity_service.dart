@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/utils/firestore_utils.dart';
 import '../core/utils/week_utils.dart';
 import '../models/activity_log.dart';
 import '../models/activity_type.dart';
@@ -59,6 +60,9 @@ class ActivityService {
     File? photo,
     String note = '',
     String source = 'manual',
+    DateTime? performedAt,
+    String? logId,
+    Duration timeout = const Duration(seconds: 15),
   }) async {
     if (user.familyId.isEmpty) {
       throw const AppException('Você ainda não faz parte de uma família.');
@@ -79,23 +83,46 @@ class ActivityService {
 
     String? photoUrl;
     if (photo != null) {
-      photoUrl = await _storage.uploadActivityProof(
-        familyId: user.familyId,
-        userId: user.id,
-        file: photo,
-      );
+      photoUrl = await _storage
+          .uploadActivityProof(
+            familyId: user.familyId,
+            userId: user.id,
+            file: photo,
+          )
+          // Sem rede o upload fica pendurado tentando de novo. O prazo devolve
+          // o controle para quem chamou, que decide entre avisar ou enfileirar.
+          .timeout(timeout);
     }
 
+    // Quando a atividade ACONTECEU. Difere de agora num registro que passou
+    // pela fila offline — e é essa hora que vale para o dia, a sequência e o
+    // histórico.
+    final at = performedAt ?? DateTime.now();
     final now = DateTime.now();
+
+    // Semana do cofre é sempre a de agora: um registro atrasado não pode
+    // ressuscitar o cofre de uma semana encerrada nem zerar o da semana atual.
     final weekId = WeekUtils.weekId(now);
 
-    final logRef = _refs.activityLogs.doc();
+    // Semana do registro é a de quando foi feito — o histórico guarda a verdade.
+    final logWeekId = WeekUtils.weekId(at);
+
+    // Id determinístico quando vem da fila: se o app morrer entre gravar e
+    // limpar a fila, a repetição cai na guarda de idempotência abaixo em vez
+    // de creditar os pontos duas vezes.
+    final logRef = logId != null
+        ? _refs.activityLogs.doc(logId)
+        : _refs.activityLogs.doc();
     final feedRef = _refs.feedPosts.doc();
     final familyRef = _refs.family(user.familyId);
     final userRef = _refs.user(user.id);
 
-    return _refs.db.runTransaction<ActivityRegistrationResult>((tx) async {
+    try {
+      return await _refs.db.runTransaction<ActivityRegistrationResult>(
+      timeout: timeout,
+      (tx) async {
       // --- 1. Leituras (todas antes de qualquer escrita) -------------------
+      final existingLog = await tx.get(logRef);
       final familySnap = await tx.get(familyRef);
       final userSnap = await tx.get(userRef);
 
@@ -104,6 +131,21 @@ class ActivityService {
       }
       if (!userSnap.exists) {
         throw const AppException('Perfil não encontrado.');
+      }
+
+      // Já aplicado numa tentativa anterior: sai sem escrever nada. É o que
+      // impede crédito em dobro quando o app morre entre gravar e limpar a
+      // fila offline. Fica depois das checagens acima porque lê os dois docs.
+      if (existingLog.exists) {
+        final family = Family.fromMap(familySnap.id, familySnap.data()!);
+        return ActivityRegistrationResult(
+          pointsEarned: FirestoreUtils.toInt(existingLog.data()?['points']),
+          vaultPoints: family.vaultPoints,
+          weeklyGoal: family.weeklyGoal,
+          currentStreak:
+              FirestoreUtils.toInt(userSnap.data()?['currentStreak']),
+          unlockedRewards: const [],
+        );
       }
 
       final family = Family.fromMap(familySnap.id, familySnap.data()!);
@@ -140,7 +182,7 @@ class ActivityService {
 
       // --- 3. Novos totais --------------------------------------------------
       final newVault = vaultBase + breakdown.total;
-      final newStreak = _nextStreak(currentUser, now);
+      final newStreak = _nextStreak(currentUser, at);
       final newLongest = newStreak > currentUser.longestStreak
           ? newStreak
           : currentUser.longestStreak;
@@ -169,13 +211,15 @@ class ActivityService {
         stepsPoints: breakdown.stepsPoints,
         photoUrl: photoUrl,
         note: note,
-        weekId: weekId,
+        weekId: logWeekId,
         source: source,
       );
 
       tx.set(logRef, {
         ...log.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
+        // Hora em que a atividade foi feita, não em que sincronizou.
+        'createdAt': Timestamp.fromDate(at),
+        'syncedAt': FieldValue.serverTimestamp(),
       });
 
       tx.update(userRef, {
@@ -184,7 +228,7 @@ class ActivityService {
         'weekId': weekId,
         'currentStreak': newStreak,
         'longestStreak': newLongest,
-        'lastActivityAt': Timestamp.fromDate(now),
+        'lastActivityAt': Timestamp.fromDate(at),
         'statusMessage':
             '${type.label} de $durationMinutes min — +${breakdown.total} pts',
         'updatedAt': FieldValue.serverTimestamp(),
@@ -219,6 +263,11 @@ class ActivityService {
             'activityType': type.id,
             'steps': type.tracksSteps ? steps : 0,
             'streak': newStreak,
+            // Quando o exercício foi feito, além de quando o post apareceu.
+            'performedAt': Timestamp.fromDate(at),
+            // Registro que passou pela fila offline aparece marcado: a família
+            // vê que chegou atrasado em vez de achar que acabou de acontecer.
+            'offlineSync': source == 'offline_queue',
           },
         ).toMap(),
         'createdAt': FieldValue.serverTimestamp(),
@@ -250,7 +299,27 @@ class ActivityService {
         currentStreak: newStreak,
         unlockedRewards: unlocked,
       );
-    });
+    },
+      );
+    } on FirebaseException catch (e) {
+      throw _traduzirRecusa(e);
+    }
+  }
+
+  /// O servidor recusa por regra, não por capricho — e a mensagem precisa
+  /// dizer o que arrumar. As duas causas reais são foto faltando e relógio
+  /// fora da janela aceita.
+  AppException _traduzirRecusa(FirebaseException e) {
+    if (e.code == 'permission-denied') {
+      return const AppException(
+        'O servidor recusou o registro. Verifique se a foto foi anexada e se '
+        'a data e hora do celular estão corretas (deixe no ajuste automático).',
+      );
+    }
+    if (e.code == 'unavailable' || e.code == 'deadline-exceeded') {
+      return const AppException('Sem conexão com o servidor.');
+    }
+    return AppException(e.message ?? 'Não foi possível registrar agora.');
   }
 
   /// Carta "Salva-Mãe / Salva-Pai".
@@ -336,7 +405,7 @@ class ActivityService {
         'longestStreak': recipientStreak > recipient.longestStreak
             ? recipientStreak
             : recipient.longestStreak,
-        'lastActivityAt': Timestamp.fromDate(now),
+        'lastActivityAt': Timestamp.fromDate(at),
         'statusMessage': 'Sequência salva por ${donorUser.firstName}!',
         'updatedAt': FieldValue.serverTimestamp(),
       });
