@@ -229,7 +229,7 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
 
             // --- Foto comprovante -----------------------------------------
             _PhotoPicker(
-              photoBytes: _photoBytes,
+              bytes: _photoBytes,
               required: requiresPhoto,
               onPick: _pickPhoto,
               onRemove: () => setState(() => _photoBytes = null),

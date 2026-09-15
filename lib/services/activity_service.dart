@@ -405,7 +405,9 @@ class ActivityService {
         'longestStreak': recipientStreak > recipient.longestStreak
             ? recipientStreak
             : recipient.longestStreak,
-        'lastActivityAt': Timestamp.fromDate(at),
+        // Doação acontece ao vivo, então a hora é a de agora — `at` só existe
+        // no registro de atividade, que pode vir atrasado da fila offline.
+        'lastActivityAt': Timestamp.fromDate(now),
         'statusMessage': 'Sequência salva por ${donorUser.firstName}!',
         'updatedAt': FieldValue.serverTimestamp(),
       });

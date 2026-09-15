@@ -6,4 +6,6 @@
 ///
 /// O `export` condicional é o que permite o mesmo código compilar nos dois
 /// lados: `dart:io` sequer é importado quando o alvo é a web.
+library;
+
 export 'photo_cache_web.dart' if (dart.library.io) 'photo_cache_io.dart';
