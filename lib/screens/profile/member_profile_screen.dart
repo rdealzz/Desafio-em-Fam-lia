@@ -312,7 +312,7 @@ class _LogTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = AppColors.activity[log.type.id] ?? AppColors.primary;
+    final color = AppColors.activityGroup[log.type.group.id] ?? AppColors.primary;
 
     return Container(
       padding: const EdgeInsets.all(14),

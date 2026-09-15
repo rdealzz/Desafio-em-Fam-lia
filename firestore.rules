@@ -21,6 +21,18 @@ service cloud.firestore {
       return isSignedIn() && familyId != null && familyId == myFamilyId();
     }
 
+    // Exigência de foto lida do documento da família. Ausente = exigida:
+    // o padrão seguro é pedir a prova, não dispensá-la.
+    function familyRequiresPhoto(familyId) {
+      return get(/databases/$(database)/documents/families/$(familyId))
+             .data.get('requirePhotoProof', true) == true;
+    }
+
+    function hasPhotoProof() {
+      return request.resource.data.photoUrl is string &&
+             request.resource.data.photoUrl.size() > 0;
+    }
+
     function changedKeys() {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
@@ -77,7 +89,11 @@ service cloud.firestore {
         sameFamily(request.resource.data.familyId) &&
         request.resource.data.points is int &&
         request.resource.data.points > 0 &&
-        request.resource.data.points <= 2000;
+        request.resource.data.points <= 2000 &&
+        // A foto comprovante é regra de integridade, não só de interface:
+        // sem ela o registro é recusado pelo servidor.
+        (hasPhotoProof() ||
+         !familyRequiresPhoto(request.resource.data.familyId));
 
       // Histórico é imutável: correções entram como novo registro.
       allow update, delete: if false;

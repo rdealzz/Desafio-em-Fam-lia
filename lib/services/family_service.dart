@@ -120,6 +120,14 @@ class FamilyService {
     });
   }
 
+  /// Liga/desliga a exigência de foto comprovante.
+  Future<void> setRequirePhotoProof(String familyId, bool required) {
+    return _refs.family(familyId).update({
+      'requirePhotoProof': required,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Future<void> updateRewards(String familyId, List<Reward> rewards) {
     return _refs.family(familyId).update({
       'rewards': rewards.map((r) => r.toMap()).toList(),

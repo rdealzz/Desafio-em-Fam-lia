@@ -14,25 +14,22 @@ class AppColors {
   static const Color ink = Color(0xFF1C1B2E);
   static const Color inkSoft = Color(0xFF6E6B8A);
 
-  /// Cor de identidade de cada modalidade (mesma ordem de `ActivityType`).
+  /// Cor por GRUPO de atividade, não por modalidade.
   ///
-  /// Paleta validada para daltonismo com `scripts/validate_palette.js` da
-  /// skill dataviz, no critério mais rígido (todos os pares, não só os
-  /// adjacentes — as 4 aparecem juntas na grade 2x2).
+  /// Com sete modalidades, sete cores de identidade reprovam no validador de
+  /// daltonismo: a pior dupla fica a ΔE 1,1 em deuteranopia — indistinguível.
+  /// Três cores de grupo passam em todos os pares (pior: ΔE 7,7 CVD e 15,1
+  /// visão normal), e a cor passa a dizer algo útil — onde o treino acontece.
   ///
-  /// A paleta anterior (verde/vermelho/laranja) reprovava: vermelho e verde
-  /// ficavam com ΔE 2,5 em deuteranopia — o daltonismo mais comum — e quem
-  /// tem não separava "Academia" de "Alongamento". Laranja e vermelho tinham
-  /// ΔE 9,3 mesmo com visão plena.
+  /// O 7,7 está na faixa que só vale com codificação secundária, e ela existe:
+  /// toda modalidade aparece sempre com emoji e rótulo, nunca cor sozinha.
   ///
-  /// Nesta, o pior par fica em ΔE 7,7 (CVD) e 20,8 (visão normal). O 7,7 está
-  /// na faixa que só vale com codificação secundária — e existe: toda
-  /// modalidade aparece sempre com emoji e rótulo, nunca cor sozinha.
-  static const Map<String, Color> activity = {
-    'walk': Color(0xFF3DA5FF), // azul
-    'stretching': Color(0xFF0CA678), // teal
-    'gym': Color(0xFFF08C00), // laranja
-    'home_workout': Color(0xFFB15BD8), // roxo
+  /// Validado com scripts/validate_palette.js da skill dataviz, critério
+  /// --pairs all (as modalidades aparecem todas juntas na grade).
+  static const Map<String, Color> activityGroup = {
+    'outdoor': Color(0xFF3DA5FF), // azul
+    'training': Color(0xFFF08C00), // laranja
+    'home': Color(0xFFB15BD8), // roxo
   };
 
   static const LinearGradient vaultGradient = LinearGradient(

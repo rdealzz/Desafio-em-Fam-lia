@@ -85,10 +85,20 @@ Projetos criados recentemente precisam do **plano Blaze** (pagamento por uso)
 para usar o Cloud Storage — o bucket gratuito saiu do plano Spark. O Blaze tem
 cota gratuita generosa, mas exige cadastrar um cartão.
 
-**Dá para usar o app sem Storage.** A foto comprovante é opcional em todo o
-fluxo: `registerActivity` só chama o upload quando existe foto, e a tela de
-registro começa sem nenhuma. Sem o bucket, tudo funciona — cofre, pontos,
-cartas, mural — menos anexar foto.
+**A foto comprovante passou a ser obrigatória**, então o Storage virou
+dependência real: sem bucket, ninguém consegue registrar atividade.
+
+Se você não vai ativar o Blaze agora, desligue a exigência na família — o resto
+do app (cofre, pontos, sequência, cartas, mural) funciona igual, só sem foto:
+
+```dart
+context.read<FamilyService>().setRequirePhotoProof(familyId, false);
+```
+
+Ou direto no documento da família, no console: `requirePhotoProof: false`.
+
+No emulador local isso não é problema: o Storage emulado sobe junto e aceita
+upload sem cobrança nenhuma.
 
 Firestore e Authentication continuam no plano gratuito normalmente.
 

@@ -15,12 +15,22 @@ tudo vai para o mesmo cofre.
 
 ### Pontuação
 
-| Modalidade | Regra |
-|---|---|
-| 🚶 Caminhada | 100 pts a cada 30 min **+ 1 pt a cada 100 passos** |
-| 🧘 Alongamento | 50 pts a cada 10 min |
-| 🏋️ Academia / Corrida | 150 pts a cada 30 min |
-| 🏠 Exercício em Casa | 100 pts a cada 20 min |
+| Modalidade | `type` | Regra |
+|---|---|---|
+| 🚶 Caminhada | `walk` | 100 pts a cada 30 min **+ 1 pt a cada 100 passos** |
+| 🏃 Corrida | `running` | 150 pts a cada 30 min **+ 1 pt a cada 100 passos** |
+| 🚴 Ciclismo | `cycling` | 150 pts a cada 30 min |
+| 🏋️ Academia | `gym` | 150 pts a cada 30 min |
+| 🥋 Luta | `martial_arts` | 150 pts a cada 30 min |
+| 🏠 Exercício em Casa | `home_workout` | 100 pts a cada 20 min |
+| 🧘 Alongamento | `stretching` | 50 pts a cada 10 min |
+
+**Toda atividade exige foto comprovante.** Sem foto o registro é recusado — na
+tela, no serviço e nas regras do Firestore. Dá para desligar por família
+(`requirePhotoProof`) se o Storage não estiver disponível.
+
+Passos só contam onde o pé bate no chão: caminhada e corrida. Pedalar não gera
+passo.
 
 Só blocos completos pontuam (45 min de caminhada = 100 pts), e a tela de
 registro sempre mostra quanto falta para o próximo bloco. A conta vive em um

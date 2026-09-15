@@ -62,6 +62,7 @@ junto e mudam de estado na mesma transação que atualiza o cofre.
 
   "weeklyGoal": 5000,
   "vaultPoints": 3200,
+  "requirePhotoProof": true,
   "weekId": "2026-W37",
   "weekStartAt": "2026-09-08T00:00:00Z",
   "weekEndAt": "2026-09-14T23:59:59Z",
@@ -89,6 +90,7 @@ junto e mudam de estado na mesma transação que atualiza o cofre.
 | `vaultPoints` | int | Soma dos pontos dos 4 na semana. Só escrito dentro de `runTransaction`. |
 | `weeklyGoal` | int | Meta da semana (padrão 5.000). |
 | `inviteCode` | string | 6 caracteres sem ambiguidade (sem O/0, I/1). |
+| `requirePhotoProof` | bool | Exige foto comprovante em todo registro. Padrão `true`; ausente também conta como `true`. Barrado na tela, na transação e nas regras. |
 | `rewards[].level` | int | 1 = prêmio semanal, 2 = mensal. |
 
 Dart: `lib/models/family.dart` e `lib/models/reward.dart`
@@ -122,7 +124,8 @@ os logs da semana.
 }
 ```
 
-`type` ∈ `walk` | `stretching` | `gym` | `home_workout`
+`type` ∈ `walk` | `running` | `cycling` | `gym` | `martial_arts` |
+`home_workout` | `stretching`
 `source` ∈ `manual` | `health` (HealthKit / Google Fit)
 
 Dart: `lib/models/activity_log.dart`
@@ -173,10 +176,13 @@ Dart: `lib/models/feed_post.dart`
 
 | Modalidade | `type` | Regra |
 |---|---|---|
-| Caminhada | `walk` | 100 pts / 30 min **+ 1 pt a cada 100 passos** |
-| Alongamento | `stretching` | 50 pts / 10 min |
-| Academia / Corrida | `gym` | 150 pts / 30 min |
-| Exercício em Casa | `home_workout` | 100 pts / 20 min |
+| 🚶 Caminhada | `walk` | 100 pts a cada 30 min **+ 1 pt a cada 100 passos** |
+| 🏃 Corrida | `running` | 150 pts a cada 30 min **+ 1 pt a cada 100 passos** |
+| 🚴 Ciclismo | `cycling` | 150 pts a cada 30 min |
+| 🏋️ Academia | `gym` | 150 pts a cada 30 min |
+| 🥋 Luta | `martial_arts` | 150 pts a cada 30 min |
+| 🏠 Exercício em Casa | `home_workout` | 100 pts a cada 20 min |
+| 🧘 Alongamento | `stretching` | 50 pts a cada 10 min |
 
 Só blocos completos pontuam: 45 min de caminhada = 1 bloco = 100 pts (a tela
 avisa quanto falta para o próximo). Implementação única em

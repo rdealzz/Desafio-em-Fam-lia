@@ -81,14 +81,83 @@ void main() {
       );
     });
 
-    test('passos só contam na caminhada', () {
-      final result = PointsCalculator.calculate(
-        type: ActivityType.gym,
+    test('corrida: 150 pts a cada 30 min', () {
+      expect(
+        PointsCalculator.calculate(
+          type: ActivityType.running,
+          minutes: 30,
+        ).total,
+        150,
+      );
+    });
+
+    test('ciclismo: 150 pts a cada 30 min', () {
+      expect(
+        PointsCalculator.calculate(
+          type: ActivityType.cycling,
+          minutes: 60,
+        ).total,
+        300,
+      );
+    });
+
+    test('luta: 150 pts a cada 30 min', () {
+      expect(
+        PointsCalculator.calculate(
+          type: ActivityType.martialArts,
+          minutes: 90,
+        ).total,
+        450,
+      );
+    });
+
+    test('passos contam onde o pé bate no chão', () {
+      // Caminhada e corrida geram passo; pedalar e academia não.
+      expect(ActivityType.walk.tracksSteps, isTrue);
+      expect(ActivityType.running.tracksSteps, isTrue);
+      expect(ActivityType.cycling.tracksSteps, isFalse);
+      expect(ActivityType.gym.tracksSteps, isFalse);
+
+      final pedalando = PointsCalculator.calculate(
+        type: ActivityType.cycling,
         minutes: 30,
         steps: 5000,
       );
-      expect(result.stepsPoints, 0);
-      expect(result.total, 150);
+      expect(pedalando.stepsPoints, 0);
+      expect(pedalando.total, 150);
+    });
+  });
+
+  group('Grupos de atividade', () {
+    test('toda modalidade pertence a um grupo', () {
+      for (final type in ActivityType.values) {
+        expect(type.group, isNotNull);
+      }
+    });
+
+    test('os três grupos estão povoados', () {
+      for (final group in ActivityGroup.values) {
+        expect(ActivityType.ofGroup(group), isNotEmpty);
+      }
+    });
+
+    test('ofGroup cobre todas as modalidades sem repetir', () {
+      final agrupadas = ActivityGroup.values
+          .expand(ActivityType.ofGroup)
+          .toList();
+      expect(agrupadas.length, ActivityType.values.length);
+      expect(agrupadas.toSet().length, ActivityType.values.length);
+    });
+
+    test('ids persistidos são únicos', () {
+      final ids = ActivityType.values.map((t) => t.id).toSet();
+      expect(ids.length, ActivityType.values.length);
+    });
+
+    test('fromId sobrevive a valor desconhecido', () {
+      expect(ActivityType.fromId('modalidade_que_nao_existe'),
+          ActivityType.walk);
+      expect(ActivityType.fromId('martial_arts'), ActivityType.martialArts);
     });
   });
 

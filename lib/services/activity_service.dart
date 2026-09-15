@@ -109,6 +109,14 @@ class ActivityService {
       final family = Family.fromMap(familySnap.id, familySnap.data()!);
       final currentUser = AppUser.fromMap(userSnap.id, userSnap.data()!);
 
+      // Conferido aqui dentro, contra o documento da família, e não só na
+      // interface: a tela pode estar com uma cópia velha da configuração.
+      if (family.requirePhotoProof && (photoUrl == null || photoUrl.isEmpty)) {
+        throw const AppException(
+          'Esta família exige foto comprovante. Anexe a foto do momento.',
+        );
+      }
+
       // --- 2. Virada de semana ---------------------------------------------
       // Se o cofre ainda aponta para a semana passada, ele zera aqui — antes
       // de somar. Assim ninguém precisa de um job agendado no backend.

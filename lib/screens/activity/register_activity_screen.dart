@@ -41,13 +41,20 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
   bool _loadingSteps = false;
 
   /// Atalhos de duração — cobrem o uso real sem abrir o teclado.
-  static const List<int> _quickMinutes = [10, 15, 20, 30, 45, 60];
+  static const List<int> _quickMinutes = [10, 15, 20, 30, 45, 60, 90];
 
   @override
   void dispose() {
     _stepsController.dispose();
     _noteController.dispose();
     super.dispose();
+  }
+
+  /// Botão desabilitado precisa dizer o que falta, senão vira beco sem saída.
+  String _submitLabel(PointsBreakdown breakdown, bool missingPhoto) {
+    if (breakdown.total <= 0) return 'Aumente o tempo para pontuar';
+    if (missingPhoto) return 'Anexe a foto para registrar';
+    return 'Depositar ${Formatters.points(breakdown.total)} pts no cofre';
   }
 
   PointsBreakdown get _breakdown => PointsCalculator.calculate(
@@ -59,6 +66,11 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
   @override
   Widget build(BuildContext context) {
     final breakdown = _breakdown;
+    // Na dúvida (família ainda carregando), exige — o padrão seguro é pedir a
+    // prova, não dispensá-la.
+    final requiresPhoto =
+        context.watch<SessionController>().family?.requirePhotoProof ?? true;
+    final missingPhoto = requiresPhoto && _photo == null;
 
     return Scaffold(
       body: SafeArea(
@@ -215,6 +227,7 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
             // --- Foto comprovante -----------------------------------------
             _PhotoPicker(
               photo: _photo,
+              required: requiresPhoto,
               onPick: _pickPhoto,
               onRemove: () => setState(() => _photo = null),
             ),
@@ -236,7 +249,9 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
             const SizedBox(height: 20),
 
             FilledButton(
-              onPressed: _saving || breakdown.total <= 0 ? null : _submit,
+              onPressed: _saving || breakdown.total <= 0 || missingPhoto
+                  ? null
+                  : _submit,
               child: _saving
                   ? const SizedBox(
                       width: 24,
@@ -246,11 +261,7 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : Text(
-                      breakdown.total > 0
-                          ? 'Depositar ${Formatters.points(breakdown.total)} pts no cofre'
-                          : 'Aumente o tempo para pontuar',
-                    ),
+                  : Text(_submitLabel(breakdown, missingPhoto)),
             ),
           ],
         ),
@@ -461,7 +472,7 @@ class _PointsPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = AppColors.activity[type.id] ?? AppColors.primary;
+    final color = AppColors.activityGroup[type.group.id] ?? AppColors.primary;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -564,44 +575,60 @@ class _BreakdownLine extends StatelessWidget {
 class _PhotoPicker extends StatelessWidget {
   const _PhotoPicker({
     required this.photo,
+    required this.required,
     required this.onPick,
     required this.onRemove,
   });
 
   final File? photo;
+
+  /// Quando a família exige comprovante, o vazio é um bloqueio — e precisa
+  /// parecer um: contorno laranja e a palavra "obrigatória".
+  final bool required;
+
   final VoidCallback onPick;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
     if (photo == null) {
+      final accent = required ? AppColors.secondary : AppColors.primary;
       return InkWell(
         onTap: onPick,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          height: 110,
+          height: 124,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: required ? accent.withOpacity(0.06) : Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: const Color(0xFFD9D6E8),
-              style: BorderStyle.solid,
+              color: required ? accent : const Color(0xFFD9D6E8),
+              width: required ? 2 : 1,
             ),
           ),
-          child: const Column(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.add_a_photo_outlined,
-                  size: 28, color: AppColors.primary),
-              SizedBox(height: 8),
+              Icon(Icons.add_a_photo_outlined, size: 28, color: accent),
+              const SizedBox(height: 8),
               Text(
-                'Anexar foto do momento',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                required ? 'Foto obrigatória' : 'Anexar foto do momento',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14.5,
+                  color: required ? accent : AppColors.ink,
+                ),
               ),
-              SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(
-                'A prova vai para o mural 😄',
-                style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
+                required
+                    ? 'Sem foto não dá para registrar — é a prova que vale no mural'
+                    : 'A prova vai para o mural 😄',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.inkSoft,
+                ),
               ),
             ],
           ),
