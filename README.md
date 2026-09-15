@@ -83,6 +83,7 @@ lib/
 ├── screens/                   # as 3 telas + login
 └── widgets/                   # cofre, avatares, prêmios, post do feed, cartas
 
+scripts/create_firebase_project.sh  # cria o projeto Firebase do zero
 scripts/setup_firebase.sh      # liga o app a um projeto Firebase real
 scripts/run_emulators.sh       # sobe os emuladores locais
 docs/firebase_setup.md         # guia de ligação + solução de problemas
@@ -128,14 +129,21 @@ Painel dos emuladores em <http://localhost:4000>.
 
 ### Ligando no Firebase de verdade
 
-1. Em <https://console.firebase.google.com>, crie um projeto e ative
-   **Authentication** (e-mail/senha), **Cloud Firestore** e **Storage**
-   (região `southamerica-east1` para quem está no Brasil).
-
-2. Rode o script:
+**Não tem projeto ainda?** Um comando cria e liga:
 
 ```bash
-./scripts/setup_firebase.sh
+./scripts/create_firebase_project.sh
+```
+
+Ele loga na sua conta Google, cria o projeto, cria o banco Firestore em São
+Paulo e chama o setup. Restam dois cliques que o Firebase CLI não cobre —
+ativar o login por e-mail/senha e criar o bucket do Storage — e o script abre
+os links e espera.
+
+**Já tem projeto?**
+
+```bash
+./scripts/setup_firebase.sh meu-projeto-id
 ```
 
 Ele confere as ferramentas, gera `android/` e `ios/`, roda o

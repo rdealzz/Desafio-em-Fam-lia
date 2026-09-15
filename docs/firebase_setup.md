@@ -42,40 +42,61 @@ automaticamente.
 
 ## Caminho B — Projeto Firebase real
 
-### 1. Criar o projeto
+### Não tenho projeto ainda
 
-Em <https://console.firebase.google.com>, crie um projeto e ative:
+Um comando cria o projeto e liga o app nele:
+
+```bash
+./scripts/create_firebase_project.sh
+# ou, se quiser escolher o ID:
+./scripts/create_firebase_project.sh desafio-familia-silva
+```
+
+O script faz login na sua conta Google, cria o projeto, cria o banco Firestore
+em `southamerica-east1`, para nos dois ajustes que só o console faz, e no fim
+chama o `setup_firebase.sh` para conectar o app e publicar as regras.
+
+**O que ele não consegue fazer** — o Firebase CLI simplesmente não tem comando
+para isso, então são dois cliques seus (o script abre os links e espera):
+
+1. **Ativar o login por e-mail/senha** — Authentication → Sign-in method
+2. **Criar o bucket do Storage** — Storage → Começar
+
+### Já tenho projeto
+
+```bash
+./scripts/setup_firebase.sh meu-projeto-id
+```
+
+Antes, confira no console que estão ativados:
 
 | Serviço | Onde | Configuração |
 |---|---|---|
 | **Authentication** | Build → Authentication → Sign-in method | ative **E-mail/senha** |
-| **Cloud Firestore** | Build → Firestore Database → Criar | modo **produção**, região `southamerica-east1` (São Paulo) |
+| **Cloud Firestore** | Build → Firestore Database → Criar | modo **produção**, `southamerica-east1` |
 | **Storage** | Build → Storage → Começar | modo **produção**, mesma região |
 
-> Escolha a região mais perto — `southamerica-east1` corta bem a latência
-> para quem está no Brasil. **A região não pode ser trocada depois.**
+> A região do Firestore **não pode ser trocada depois**. `southamerica-east1`
+> (São Paulo) corta bem a latência para quem está no Brasil.
 
-### 2. Rodar o script
+### Sobre o Storage e o plano Blaze
 
-```bash
-./scripts/setup_firebase.sh
-# ou, se já souber o ID:
-./scripts/setup_firebase.sh meu-projeto-id
-```
+Projetos criados recentemente precisam do **plano Blaze** (pagamento por uso)
+para usar o Cloud Storage — o bucket gratuito saiu do plano Spark. O Blaze tem
+cota gratuita generosa, mas exige cadastrar um cartão.
 
-Ele confere as ferramentas, gera `android/` e `ios/`, roda o
-`flutterfire configure` (é aí que você entra na conta Google), ajusta a
-configuração nativa e publica as regras e os índices.
+**Dá para usar o app sem Storage.** A foto comprovante é opcional em todo o
+fluxo: `registerActivity` só chama o upload quando existe foto, e a tela de
+registro começa sem nenhuma. Sem o bucket, tudo funciona — cofre, pontos,
+cartas, mural — menos anexar foto.
 
-Pode rodar de novo quantas vezes quiser — cada passo checa antes de mexer.
+Firestore e Authentication continuam no plano gratuito normalmente.
 
-### 3. Rodar o app
+### Rodar o app
 
 ```bash
 flutter run
 ```
-
----
 
 ## O que o script ajusta no nativo
 
@@ -133,6 +154,8 @@ ficarem prontos. Enquanto isso, o mural pode vir vazio.
 | iOS fecha ao tirar foto | faltam as descrições no `Info.plist` (tabela acima) |
 | `Default FirebaseApp is not initialized` no Android | falta o `google-services.json` em `android/app/` — o `flutterfire configure` baixa |
 | Emulador não sobe | Java ausente: `brew install openjdk` / `sudo apt install default-jre` |
+| `projects:create` falha | primeira vez na conta (aceite os termos no console), cota de projetos atingida, ou o ID já existe no mundo — rode de novo para sortear outro |
+| Upload de foto falha, resto funciona | bucket do Storage não criado, ou projeto no plano Spark (ver seção do Blaze acima) |
 
 ---
 
