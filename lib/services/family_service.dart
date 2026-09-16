@@ -18,6 +18,10 @@ class FamilyService {
   static const int defaultWeeklyGoal = 5000;
   static const int maxMembers = 4;
 
+  /// Nome já preenchido na hora de criar a família. Continua editável — é um
+  /// campo de texto comum, só vem escrito.
+  static const String nomePadrao = 'Tisulje';
+
   Stream<Family?> watchFamily(String familyId) {
     return _refs.family(familyId).snapshots().map(
           (snap) => snap.exists ? Family.fromMap(snap.id, snap.data()!) : null,

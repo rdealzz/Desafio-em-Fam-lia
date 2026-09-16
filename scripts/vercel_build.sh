@@ -66,11 +66,9 @@ compilar() {
 
   registrar ""
   registrar "=== compilando ==="
-  # DEMO_MODE: a página pública roda com dados de mentira, sem Firebase.
-  # Para publicar ligado no Firebase real, tire o define e preencha a seção
-  # `web` de lib/firebase_options.dart.
-  flutter build web --release --dart-define=DEMO_MODE=true 2>&1 | tee -a "$LOG" \
-    || return 1
+  # O app publicado fala com o Firebase real. As chaves vêm da seção `web` de
+  # lib/firebase_options.dart, gerada por ./scripts/setup_firebase.sh.
+  flutter build web --release 2>&1 | tee -a "$LOG" || return 1
 
   [ -f "$SAIDA/index.html" ] || return 1
   return 0

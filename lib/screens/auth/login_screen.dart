@@ -6,6 +6,7 @@ import '../../core/theme/palette.dart';
 import '../../core/theme/tokens.dart';
 import '../../services/app_exception.dart';
 import '../../services/auth_service.dart';
+import '../../services/family_service.dart';
 import '../../widgets/ui/avatar_animals.dart';
 import '../../widgets/ui/avatar_colors.dart';
 import '../../widgets/ui/avatar_picker.dart';
@@ -28,7 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usuario = TextEditingController();
   final _senha = TextEditingController();
   final _nome = TextEditingController();
-  final _nomeFamilia = TextEditingController();
+  final _nomeFamilia =
+      TextEditingController(text: FamilyService.nomePadrao);
   final _convite = TextEditingController();
 
   bool _criandoConta = false;
@@ -227,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     _Campo(
                       controller: _nomeFamilia,
                       label: 'Nome da família',
-                      hint: 'ex.: Família Silva',
+                      hint: FamilyService.nomePadrao,
                       icon: Icons.home_outlined,
                       capitalize: true,
                     )

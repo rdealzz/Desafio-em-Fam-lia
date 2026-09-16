@@ -79,10 +79,14 @@ echo
 
 firebase login --no-localhost || firebase login
 
+# web junto: a família vai usar pelo navegador, e é a seção `web` de
+# firebase_options.dart que a página publicada lê. Sem ela o link abre a tela
+# de configuração mesmo com o celular funcionando.
 if [ -n "$PROJECT_ID" ]; then
-  flutterfire configure --project="$PROJECT_ID" --platforms=android,ios --yes
+  flutterfire configure --project="$PROJECT_ID" \
+    --platforms=android,ios,web --yes
 else
-  flutterfire configure --platforms=android,ios
+  flutterfire configure --platforms=android,ios,web
 fi
 
 if grep -q "COLE_" lib/firebase_options.dart 2>/dev/null; then
@@ -156,8 +160,19 @@ fi
 echo
 echo "${GREEN}${BOLD}✅ Firebase ligado ao projeto $DETECTED_PROJECT${OFF}"
 echo
-echo "${BOLD}Agora:${OFF}"
+echo "${BOLD}Agora, na sua máquina:${OFF}"
 echo "  flutter run"
+echo
+echo "${BOLD}Para o link que a família abre no navegador:${OFF}"
+echo "  git add lib/firebase_options.dart && git commit -m 'chaves do Firebase'"
+echo "  git push"
+echo
+echo "  As chaves de cliente do Firebase são públicas por natureza — quem"
+echo "  protege os dados são as regras do Firestore, já publicadas acima."
+echo
+echo "  No console do Firebase, em Authentication > Settings > Authorized"
+echo "  domains, acrescente o domínio publicado. Sem isso o login falha no"
+echo "  navegador, mesmo com as chaves certas."
 echo
 echo "${BOLD}Primeira pessoa:${OFF} cria a conta em \"Criar família\" e compartilha"
 echo "o código do convite (⋮ no dashboard) com os outros três."

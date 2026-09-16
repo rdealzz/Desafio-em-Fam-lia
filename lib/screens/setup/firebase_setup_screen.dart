@@ -9,7 +9,8 @@ import '../../core/theme/tokens.dart';
 /// App mínimo mostrado quando o Firebase ainda não está ligado.
 ///
 /// Melhor do que crashar com tela branca: diz exatamente o que falta e qual
-/// comando resolve.
+/// comando resolve. É a primeira coisa que aparece num clone novo, então
+/// carrega o tema de verdade — o app não pode dar as boas-vindas feio.
 class FirebaseSetupApp extends StatelessWidget {
   const FirebaseSetupApp({super.key, required this.startup});
 
@@ -32,138 +33,194 @@ class FirebaseSetupScreen extends StatelessWidget {
 
   final FirebaseStartup startup;
 
-  bool get _isFailure => startup.status == FirebaseStartupStatus.failed;
+  bool get _falhou => startup.status == FirebaseStartupStatus.failed;
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+
     return Scaffold(
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
-          children: [
-            Text(
-              _isFailure ? '⚠️' : '🔌',
-              style: const TextStyle(fontSize: 52),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _isFailure
-                  ? 'Firebase não respondeu'
-                  : 'Falta ligar o Firebase',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _isFailure
-                  ? 'As chaves existem, mas a conexão falhou. Confira se '
-                      'Authentication, Firestore e Storage estão ativados no '
-                      'console do projeto.'
-                  : 'O arquivo lib/firebase_options.dart ainda está com os '
-                      'valores de exemplo. Escolha um dos caminhos abaixo.',
-              style: TextStyle(color: context.palette.textSecondary, height: 1.45),
-            ),
-
-            if (_isFailure && startup.detail.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: context.palette.danger.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Text(
-                  startup.detail,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: context.palette.danger,
-                    height: 1.4,
+        child: Center(
+          // Sem isso, no monitor a linha de texto atravessa a tela inteira e
+          // fica ilegível. 560 é o limite usual de largura de leitura.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                Space.lg,
+                Space.xxl,
+                Space.lg,
+                Space.huge,
+              ),
+              children: [
+                // Ícone do Material, não emoji: o CanvasKit do Flutter web não
+                // usa a fonte de emoji do sistema e desenharia quadradinho.
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: _falhou ? p.energySoft : p.accentSoft,
+                    borderRadius: BorderRadius.circular(Radii.md),
+                  ),
+                  child: Icon(
+                    _falhou
+                        ? Icons.error_outline_rounded
+                        : Icons.power_settings_new_rounded,
+                    size: 30,
+                    color: _falhou ? p.danger : p.accent,
                   ),
                 ),
-              ),
-            ],
-
-            const SizedBox(height: 28),
-
-            const _SetupStep(
-              number: '1',
-              emoji: '🧪',
-              title: 'Só quero ver o app rodando agora',
-              body: 'Roda contra o emulador local — não precisa de conta '
-                  'Firebase nenhuma. Em dois terminais:',
-              command: './scripts/run_emulators.sh\n\n'
-                  'flutter run --dart-define=USE_FIREBASE_EMULATOR=true',
-            ),
-            const SizedBox(height: 16),
-            const _SetupStep(
-              number: '2',
-              emoji: '🚀',
-              title: 'Ligar no meu projeto Firebase de verdade',
-              body: 'O script cria as pastas nativas, conecta o projeto e '
-                  'publica as regras:',
-              command: './scripts/setup_firebase.sh',
-            ),
-
-            const SizedBox(height: 28),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: context.palette.accent.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                'No console do Firebase, o projeto precisa ter ativados:\n'
-                '• Authentication → método E-mail/senha\n'
-                '• Cloud Firestore\n'
-                '• Storage',
-                style: TextStyle(
-                  fontSize: 13.5,
-                  height: 1.6,
-                  color: context.palette.accent,
-                  fontWeight: FontWeight.w600,
+                const SizedBox(height: Space.lg),
+                Text(
+                  _falhou ? 'O Firebase não respondeu' : 'Falta ligar o servidor',
+                  style: t.headlineMedium,
                 ),
-              ),
-            ),
+                const SizedBox(height: Space.sm),
+                Text(
+                  _falhou
+                      ? 'As chaves existem, mas a conexão falhou. Confira se '
+                          'Authentication, Firestore e Storage estão ativados '
+                          'no console do projeto.'
+                      : 'O app está pronto; falta dizer a ele em qual servidor '
+                          'guardar os pontos e as fotos. São dois minutos, uma '
+                          'vez só.',
+                  style: t.bodyMedium?.copyWith(height: 1.45),
+                ),
 
-            const SizedBox(height: 20),
-            Text(
-              'Detalhes em docs/firebase_setup.md',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: context.palette.textSecondary,
-              ),
+                if (_falhou && startup.detail.isNotEmpty) ...[
+                  const SizedBox(height: Space.lg),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(Space.md),
+                    decoration: BoxDecoration(
+                      color: p.energySoft,
+                      borderRadius: BorderRadius.circular(Radii.md),
+                    ),
+                    child: Text(
+                      startup.detail,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: p.danger,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: Space.xl),
+
+                const _Passo(
+                  numero: '1',
+                  icone: Icons.rocket_launch_rounded,
+                  titulo: 'Ligar no seu projeto Firebase',
+                  corpo: 'Rode na sua máquina, dentro da pasta do projeto. Ele '
+                      'abre o navegador para você entrar com a sua conta '
+                      'Google, cria o projeto, gera as chaves e publica as '
+                      'regras de segurança.',
+                  comando: './scripts/setup_firebase.sh',
+                ),
+                const SizedBox(height: Space.lg),
+                const _Passo(
+                  numero: '2',
+                  icone: Icons.science_outlined,
+                  titulo: 'Ou só experimentar, sem criar conta',
+                  corpo: 'O emulador roda tudo no seu computador: dá para usar '
+                      'o app inteiro sem conta Firebase nenhuma. Os dados '
+                      'somem quando você fecha. Em dois terminais:',
+                  comando: './scripts/run_emulators.sh\n\n'
+                      'flutter run --dart-define=USE_FIREBASE_EMULATOR=true',
+                ),
+
+                const SizedBox(height: Space.xl),
+                Container(
+                  padding: const EdgeInsets.all(Space.lg),
+                  decoration: BoxDecoration(
+                    color: p.accentSoft,
+                    borderRadius: BorderRadius.circular(Radii.lg),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'No console do Firebase, o projeto precisa ter '
+                        'ativados:',
+                        style: t.labelLarge?.copyWith(color: p.accent),
+                      ),
+                      const SizedBox(height: Space.sm),
+                      for (final item in const [
+                        'Authentication → método E-mail/senha',
+                        'Cloud Firestore',
+                        'Storage',
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.check_rounded,
+                                  size: 16, color: p.accent),
+                              const SizedBox(width: Space.sm),
+                              Expanded(
+                                child: Text(
+                                  item,
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    height: 1.45,
+                                    color: p.accent,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: Space.lg),
+                Text(
+                  'Passo a passo e solução de problemas em '
+                  'docs/firebase_setup.md',
+                  textAlign: TextAlign.center,
+                  style: t.bodySmall,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _SetupStep extends StatelessWidget {
-  const _SetupStep({
-    required this.number,
-    required this.emoji,
-    required this.title,
-    required this.body,
-    required this.command,
+class _Passo extends StatelessWidget {
+  const _Passo({
+    required this.numero,
+    required this.icone,
+    required this.titulo,
+    required this.corpo,
+    required this.comando,
   });
 
-  final String number;
-  final String emoji;
-  final String title;
-  final String body;
-  final String command;
+  final String numero;
+  final IconData icone;
+  final String titulo;
+  final String corpo;
+  final String comando;
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(Space.lg),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: p.surface,
         borderRadius: BorderRadius.circular(Radii.lg),
-        border: Border.all(color: const Color(0xFFEFEDF7)),
+        border: Border.all(color: p.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,80 +228,87 @@ class _SetupStep extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 30,
-                height: 30,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
-                  color: context.palette.accent,
+                  color: p.accent,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  number,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(emoji, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
+                  numero,
                   style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: context.palette.textPrimary,
+                    color: p.onAccent,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
                   ),
                 ),
               ),
+              const SizedBox(width: Space.md),
+              Icon(icone, size: 19, color: p.textSecondary),
+              const SizedBox(width: Space.sm),
+              Expanded(child: Text(titulo, style: t.titleSmall)),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            body,
-            style: TextStyle(
-              fontSize: 13.5,
-              height: 1.4,
-              color: context.palette.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: command));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Comando copiado')),
-              );
-            },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: context.palette.textPrimary,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      command,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 12.5,
-                        color: Color(0xFF9BE8B0),
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.copy_rounded,
-                      size: 16, color: Colors.white54),
-                ],
-              ),
-            ),
-          ),
+          const SizedBox(height: Space.md),
+          Text(corpo, style: t.bodySmall?.copyWith(height: 1.45)),
+          const SizedBox(height: Space.md),
+          _Comando(comando: comando),
         ],
+      ),
+    );
+  }
+}
+
+/// O comando, em caixa preta, que copia ao toque.
+class _Comando extends StatelessWidget {
+  const _Comando({required this.comando});
+
+  final String comando;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Clipboard.setData(ClipboardData(text: comando));
+        HapticFeedback.selectionClick();
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(content: Text('Comando copiado')),
+          );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(Space.md),
+        decoration: BoxDecoration(
+          // Terminal é escuro nos dois temas: quem lê reconhece na hora que
+          // aquilo é para colar no terminal, não para ler.
+          color: const Color(0xFF14161C),
+          borderRadius: BorderRadius.circular(Radii.group),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              // Texto simples, não SelectableText: a seleção engoliria o
+              // toque, e tocar na caixa é justamente o que copia.
+              child: Text(
+                comando,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontFamilyFallback: ['Courier New', 'monospace'],
+                  fontSize: 12.5,
+                  color: Color(0xFF9BE8B0),
+                  height: 1.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: Space.sm),
+            // A caixa é escura nos dois temas, então a cor do ícone é
+            // fixa — p.onAccent inverteria junto com o tema e sumiria.
+            const Icon(Icons.copy_rounded, size: 16, color: Colors.white54),
+          ],
+        ),
       ),
     );
   }

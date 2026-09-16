@@ -22,8 +22,8 @@ Pronto. Cada push na `main` publica em
 
 # Vercel
 
-A página publicada roda em **modo demonstração**: dados de mentira, sem
-Firebase, sem conta. Serve para ver a interface e mostrar para a família.
+A página publicada é o app de verdade, ligado no Firebase: a família entra com
+usuário e senha e os pontos são os mesmos do celular.
 
 ---
 
@@ -73,7 +73,7 @@ A Vercel não traz Flutter. Então `scripts/vercel_build.sh`:
 2. roda `flutter precache --web` — só os artefatos de web, sem baixar Android,
    iOS, Linux, Windows e macOS à toa
 3. `flutter pub get`
-4. `flutter build web --release --dart-define=DEMO_MODE=true`
+4. `flutter build web --release`
 5. se qualquer passo falhar, publica a página de diagnóstico em vez de deixar
    o deploy sem saída
 
@@ -98,7 +98,7 @@ FLUTTER_VERSION = 3.24.5
 Se você tem Flutter instalado, dá para reproduzir exatamente o que a Vercel faz:
 
 ```bash
-flutter build web --release --dart-define=DEMO_MODE=true
+flutter build web --release
 # e servir o resultado:
 cd build/web && python3 -m http.server 8000
 ```
@@ -106,21 +106,21 @@ cd build/web && python3 -m http.server 8000
 Ou rodar direto no navegador, sem build:
 
 ```bash
-flutter run -d chrome --dart-define=DEMO_MODE=true
+flutter run -d chrome
 ```
 
 ---
 
-## Publicar ligado no Firebase de verdade
+## Antes do primeiro deploy: ligar o Firebase
 
-A demonstração existe porque não há projeto Firebase conectado ainda. Quando
-houver:
+Sem as chaves, a página publicada abre a tela de configuração em vez do app.
+Duas coisas resolvem:
 
-1. preencha a seção `web` de `lib/firebase_options.dart`
-   (`flutterfire configure` faz isso)
-2. tire `--dart-define=DEMO_MODE=true` de `scripts/vercel_build.sh`
-3. no console do Firebase, **Authentication → Settings → Authorized domains**,
-   acrescente o domínio da Vercel — sem isso o login falha no navegador
+1. rode `./scripts/setup_firebase.sh` uma vez, na sua máquina — ele preenche
+   `lib/firebase_options.dart` e comita as chaves
+2. no console do Firebase, **Authentication → Settings → Authorized domains**,
+   acrescente o domínio publicado (o `*.vercel.app` ou o `rdealzz.github.io`)
+   — sem isso o login falha no navegador, mesmo com as chaves certas
 
 Aí a família inteira usa o app abrindo um link, sem instalar nada. O
 `manifest.json` já permite adicionar à tela inicial do celular.

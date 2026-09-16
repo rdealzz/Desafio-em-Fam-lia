@@ -41,7 +41,6 @@ jobs:
       - name: Build web
         run: |
           flutter build web --release \
-            --dart-define=DEMO_MODE=true \
             --base-href "/${{ github.event.repository.name }}/"
 
       - uses: actions/configure-pages@v5

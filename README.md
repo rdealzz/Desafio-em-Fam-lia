@@ -91,7 +91,6 @@ lib/
 │   └── health_service.dart    # ponte para HealthKit / Google Fit
 │
 ├── state/session_controller.dart  # usuário + família + integrantes em tempo real
-├── demo/                      # vitrine com dados de mentira (modo DEMO_MODE)
 ├── screens/                   # as 3 telas + login + perfil
 └── widgets/                   # cofre, avatares, prêmios, post do feed, cartas
 
@@ -230,13 +229,16 @@ Detalhes e solução de problemas: [`docs/firebase_setup.md`](docs/firebase_setu
 
 ### Versão web (a página que a Vercel publica)
 
-O app também compila para navegador. A versão publicada roda em **modo
-demonstração**: dados de mentira, nenhum servidor, ninguém precisa criar conta.
-Serve para ver a interface e mostrar para a família antes de instalar nada.
+O app também compila para navegador, ligado no mesmo Firebase do celular: a
+mesma conta, os mesmos pontos, o mesmo mural. Assim a família usa abrindo um
+link, sem instalar nada.
 
 ```bash
-flutter run -d chrome --dart-define=DEMO_MODE=true
+flutter run -d chrome
 ```
+
+> Sem as chaves do Firebase o app abre a tela de configuração em vez do app,
+> com o comando que resolve. Rode `./scripts/setup_firebase.sh` uma vez.
 
 **Caminho mais curto — GitHub Pages:** ative em
 **Settings → Pages → Source: `GitHub Actions`**. Cada push na `main` publica em
@@ -254,9 +256,9 @@ baixa o Flutter e publica `build/web`. Cada push na `main` gera um deploy novo.
 > [`docs/vercel.md`](docs/vercel.md). Se o build falhar, a página publicada
 > mostra o log do erro em vez de sumir.
 
-Para publicar ligado no Firebase de verdade em vez da demonstração, tire o
-`--dart-define=DEMO_MODE=true` de `scripts/vercel_build.sh` e preencha a seção
-`web` de `lib/firebase_options.dart`.
+No console do Firebase, em **Authentication → Settings → Authorized domains**,
+acrescente o domínio publicado (o `*.vercel.app` ou o `rdealzz.github.io`) —
+sem isso o login falha no navegador, mesmo com as chaves certas.
 
 #### O que muda no navegador
 

@@ -16,7 +16,8 @@ class JoinFamilyScreen extends StatefulWidget {
 }
 
 class _JoinFamilyScreenState extends State<JoinFamilyScreen> {
-  final _familyName = TextEditingController();
+  final _familyName =
+      TextEditingController(text: FamilyService.nomePadrao);
   final _inviteCode = TextEditingController();
   bool _loading = false;
   String? _error;
