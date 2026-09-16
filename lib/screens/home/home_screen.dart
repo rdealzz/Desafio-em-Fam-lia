@@ -15,6 +15,7 @@ import '../../widgets/rewards_group.dart';
 import '../../widgets/ui/inset_group.dart';
 import '../../widgets/ui/pressable.dart';
 import '../../widgets/vault_progress_card.dart';
+import '../family/family_settings_screen.dart';
 import '../profile/member_profile_screen.dart';
 import '../profile/profile_edit_screen.dart';
 
@@ -239,6 +240,12 @@ class _GrupoConta extends StatelessWidget {
           title: 'Editar meu perfil',
           subtitle: 'foto, nome que aparece e cor',
           onTap: () => ProfileEditScreen.open(context),
+        ),
+        InsetRow(
+          icon: Icons.tune_rounded,
+          title: 'Ajustes da família',
+          subtitle: 'meta da semana e foto comprovante',
+          onTap: () => FamilySettingsScreen.open(context),
         ),
         InsetRow(
           icon: Icons.ios_share_rounded,

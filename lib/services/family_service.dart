@@ -50,10 +50,16 @@ class FamilyService {
   }
 
   /// Cria a família com o cofre zerado na semana corrente e os prêmios padrão.
+  /// [requirePhotoProof] nasce desligado de propósito. A foto depende do
+  /// Firebase Storage, que em projeto novo só existe no plano Blaze — com a
+  /// exigência ligada de saída, uma família sem Storage não conseguiria
+  /// registrar nem a primeira atividade, e o app pareceria quebrado. Liga-se
+  /// num toque em Ajustes da família quando o Storage existir.
   Future<Family> createFamily({
     required String name,
     required String ownerId,
     int weeklyGoal = defaultWeeklyGoal,
+    bool requirePhotoProof = false,
   }) async {
     final now = DateTime.now();
     final ref = _refs.families.doc();
@@ -67,6 +73,7 @@ class FamilyService {
       weekStartAt: WeekUtils.startOfWeek(now),
       weekEndAt: WeekUtils.endOfWeek(now),
       rewards: Reward.defaults(weeklyGoal),
+      requirePhotoProof: requirePhotoProof,
     );
 
     // Criar a família e ligar o dono a ela precisa acontecer junto: se só a
