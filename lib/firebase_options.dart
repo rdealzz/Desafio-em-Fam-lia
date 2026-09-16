@@ -1,12 +1,10 @@
-// ATENÇÃO: arquivo de exemplo.
+// Gerado a partir das chaves do console do Firebase.
 //
-// Gere o seu com a CLI oficial — ela sobrescreve este arquivo com as chaves
-// reais do seu projeto Firebase:
+// Chave de cliente do Firebase é pública por natureza: quem protege os
+// dados são as regras em firestore.rules e storage.rules, não o segredo
+// destes valores. Por isso o arquivo fica versionado.
 //
-//   dart pub global activate flutterfire_cli
-//   flutterfire configure --project=SEU_PROJETO_FIREBASE
-//
-// Enquanto os valores abaixo forem os placeholders, o app não conecta.
+// Para regerar: ./scripts/aplicar_chaves.py (ou flutterfire configure).
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
@@ -46,11 +44,12 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'COLE_SUA_API_KEY_WEB',
-    appId: 'COLE_SEU_APP_ID_WEB',
-    messagingSenderId: 'COLE_SEU_SENDER_ID',
-    projectId: 'COLE_SEU_PROJECT_ID',
-    storageBucket: 'COLE_SEU_PROJECT_ID.appspot.com',
-    authDomain: 'COLE_SEU_PROJECT_ID.firebaseapp.com',
+    apiKey: 'AIzaSyAH-DRxqBxkRLLfkx_pZcYXqKK9N8spGjk',
+    appId: '1:20486915287:web:48cbd9df390ef281ac9c92',
+    messagingSenderId: '20486915287',
+    projectId: 'familia-3d96f',
+    authDomain: 'familia-3d96f.firebaseapp.com',
+    storageBucket: 'familia-3d96f.firebasestorage.app',
+    measurementId: 'G-ZYVB1BWXQ2',
   );
 }
