@@ -146,18 +146,6 @@ class FamilyService {
     });
   }
 
-  /// Devolve uma carta "Salva-Mãe/Pai" para cada integrante — pensado para
-  /// rodar no começo da semana (hoje, manualmente; depois, numa Function).
-  Future<void> refillSaveCards(String familyId, {int cards = 1}) async {
-    final members =
-        await _refs.users.where('familyId', isEqualTo: familyId).get();
-    final batch = _refs.db.batch();
-    for (final doc in members.docs) {
-      batch.update(doc.reference, {'saveCards': cards});
-    }
-    await batch.commit();
-  }
-
   String _generateInviteCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final random = Random.secure();

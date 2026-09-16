@@ -77,7 +77,7 @@ class _DonatePointsSheetState extends State<DonatePointsSheet> {
                   children: [
                     Expanded(
                       child: StatBlock(
-                        value: '${eu.saveCards}',
+                        value: '${eu.cartasDisponiveis}',
                         label: 'cartas',
                       ),
                     ),

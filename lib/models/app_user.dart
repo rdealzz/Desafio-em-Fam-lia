@@ -19,6 +19,7 @@ class AppUser {
     this.currentStreak = 0,
     this.longestStreak = 0,
     this.saveCards = 1,
+    this.saveCardsWeekId = '',
     this.lastActivityAt,
     this.statusMessage = '',
     this.createdAt,
@@ -62,8 +63,14 @@ class AppUser {
   final int currentStreak;
   final int longestStreak;
 
-  /// Cartas "Salva-Mãe/Pai" disponíveis para doar pontos.
+  /// Cartas "Salva-Mãe/Pai" que sobraram na semana de [saveCardsWeekId].
+  /// Leia por [cartasDisponiveis], nunca direto: fora daquela semana este
+  /// número está velho.
   final int saveCards;
+
+  /// Semana a que [saveCards] se refere. Vazio = documento anterior a este
+  /// campo, que ganha a cota cheia na primeira leitura.
+  final String saveCardsWeekId;
 
   final DateTime? lastActivityAt;
 
@@ -72,9 +79,21 @@ class AppUser {
 
   final DateTime? createdAt;
 
+  /// Quantas cartas por semana cada integrante recebe.
+  static const int cartasPorSemana = 1;
+
   /// Pontos válidos para a semana atual (zera sozinho na virada da semana).
   int get pointsThisWeek =>
       weekId == WeekUtils.currentWeekId() ? weeklyPoints : 0;
+
+  /// Cartas que dá para usar agora.
+  ///
+  /// A cota se renova sozinha na virada da semana, pelo mesmo truque de
+  /// [pointsThisWeek]: em vez de alguém precisar rodar uma rotina toda
+  /// segunda-feira, o contador simplesmente não vale fora da sua semana. Sem
+  /// isso a carta acabava na primeira doação e não voltava nunca.
+  int get cartasDisponiveis =>
+      saveCardsWeekId == WeekUtils.currentWeekId() ? saveCards : cartasPorSemana;
 
   bool get isActiveToday {
     final last = lastActivityAt;
@@ -102,6 +121,7 @@ class AppUser {
       currentStreak: FirestoreUtils.toInt(map['currentStreak']),
       longestStreak: FirestoreUtils.toInt(map['longestStreak']),
       saveCards: FirestoreUtils.toInt(map['saveCards'], fallback: 1),
+      saveCardsWeekId: FirestoreUtils.toStringValue(map['saveCardsWeekId']),
       lastActivityAt: FirestoreUtils.toDateTime(map['lastActivityAt']),
       statusMessage: FirestoreUtils.toStringValue(map['statusMessage']),
       createdAt: FirestoreUtils.toDateTime(map['createdAt']),
@@ -123,6 +143,7 @@ class AppUser {
         'currentStreak': currentStreak,
         'longestStreak': longestStreak,
         'saveCards': saveCards,
+        'saveCardsWeekId': saveCardsWeekId,
         'lastActivityAt': lastActivityAt,
         'statusMessage': statusMessage,
         'createdAt': createdAt,
@@ -141,6 +162,7 @@ class AppUser {
     int? currentStreak,
     int? longestStreak,
     int? saveCards,
+    String? saveCardsWeekId,
     DateTime? lastActivityAt,
     String? statusMessage,
   }) {
@@ -160,6 +182,7 @@ class AppUser {
       currentStreak: currentStreak ?? this.currentStreak,
       longestStreak: longestStreak ?? this.longestStreak,
       saveCards: saveCards ?? this.saveCards,
+      saveCardsWeekId: saveCardsWeekId ?? this.saveCardsWeekId,
       lastActivityAt: lastActivityAt ?? this.lastActivityAt,
       statusMessage: statusMessage ?? this.statusMessage,
       createdAt: createdAt,

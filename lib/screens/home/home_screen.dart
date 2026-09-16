@@ -87,7 +87,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: Space.xl),
 
-            _GrupoCartas(saveCards: user.saveCards),
+            _GrupoCartas(saveCards: user.cartasDisponiveis),
             const SizedBox(height: Space.xl),
 
             _GrupoConta(streak: user.currentStreak),

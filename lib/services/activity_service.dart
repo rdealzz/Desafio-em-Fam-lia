@@ -366,7 +366,7 @@ class ActivityService {
       if (recipient.familyId != donorUser.familyId) {
         throw const AppException('Esse integrante é de outra família.');
       }
-      if (donorUser.saveCards <= 0) {
+      if (donorUser.cartasDisponiveis <= 0) {
         throw const AppException(
           'Você não tem cartas Salva-Mãe/Pai disponíveis.',
         );
@@ -395,7 +395,10 @@ class ActivityService {
       tx.update(donorRef, {
         'weeklyPoints': donorWeekly - amount,
         'weekId': weekId,
-        'saveCards': donorUser.saveCards - 1,
+        // Grava a semana junto: é ela que faz a cota se renovar sozinha na
+        // virada, sem rotina semanal nenhuma.
+        'saveCards': donorUser.cartasDisponiveis - 1,
+        'saveCardsWeekId': weekId,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
