@@ -1,8 +1,8 @@
 name: Publicar no GitHub Pages
 
 # Caminho alternativo à Vercel: publica direto do GitHub, sem conta em outro
-# serviço. Precisa de um passo manual uma única vez:
-#   Settings → Pages → Build and deployment → Source: GitHub Actions
+# serviço e sem passo manual — o `enablement: true` mais abaixo liga o Pages
+# pela API na primeira execução.
 on:
   push:
     branches: [main]
@@ -43,7 +43,14 @@ jobs:
           flutter build web --release \
             --base-href "/${{ github.event.repository.name }}/"
 
+      # enablement: true liga o Pages sozinho em vez de exigir a visita a
+      # Settings → Pages. Sem isto, a ação só consulta, e num repositório com
+      # Pages desligado ela falha com "Get Pages site failed ... Not Found" —
+      # o app compila e não tem para onde ir. Funciona porque o bloco
+      # `permissions` acima já concede `pages: write`.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
