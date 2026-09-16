@@ -33,7 +33,23 @@ class AuthService {
 
   static const int minUsername = 3;
   static const int maxUsername = 20;
-  static const int minSenha = 6;
+
+  /// Senha curta é permitida de propósito: "123" serve. A ideia é a família
+  /// entrar sem atrito, não proteger segredo de estado.
+  static const int minSenha = 3;
+
+  /// O Firebase recusa senha com menos de 6 caracteres, e não há como
+  /// desligar isso no servidor. Então a senha que a pessoa digita vai
+  /// acrescida deste sufixo fixo antes de sair do aparelho — ela digita
+  /// "123", o Firebase recebe algo longo o bastante para aceitar.
+  ///
+  /// O sufixo é constante e está no código, então ele NÃO acrescenta
+  /// segurança: uma senha de três dígitos continua sendo uma senha de três
+  /// dígitos. É a troca consciente por facilidade num app de quatro pessoas.
+  /// O Firebase ainda limita tentativas seguidas, o que cobre o básico.
+  static const String _sufixoSenha = '.desafio-em-familia';
+
+  static String _senhaReal(String digitada) => '$digitada$_sufixoSenha';
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
@@ -85,7 +101,7 @@ class AuthService {
     try {
       await _auth.signInWithEmailAndPassword(
         email: _emailDe(username),
-        password: password,
+        password: _senhaReal(password),
       );
     } on FirebaseAuthException catch (e) {
       throw AppException(_mensagem(e));
@@ -101,7 +117,6 @@ class AuthService {
     required String username,
     required String password,
     required String role,
-    required String avatarEmoji,
     String? familyName,
     String? inviteCode,
   }) async {
@@ -129,7 +144,7 @@ class AuthService {
     try {
       credencial = await _auth.createUserWithEmailAndPassword(
         email: _emailDe(usuario),
-        password: password,
+        password: _senhaReal(password),
       );
     } on FirebaseAuthException catch (e) {
       throw AppException(_mensagem(e, usuario: usuario));
@@ -144,7 +159,6 @@ class AuthService {
       displayName: name.trim(),
       username: usuario,
       role: role,
-      avatarEmoji: avatarEmoji,
     );
 
     await _refs.user(uid).set({
@@ -192,9 +206,12 @@ class AuthService {
     try {
       // Reautentica antes: o Firebase exige sessão recente para trocar senha.
       await user.reauthenticateWithCredential(
-        EmailAuthProvider.credential(email: email, password: senhaAtual),
+        EmailAuthProvider.credential(
+          email: email,
+          password: _senhaReal(senhaAtual),
+        ),
       );
-      await user.updatePassword(novaSenha);
+      await user.updatePassword(_senhaReal(novaSenha));
     } on FirebaseAuthException catch (e) {
       throw AppException(_mensagem(e));
     }

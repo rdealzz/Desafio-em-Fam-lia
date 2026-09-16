@@ -8,6 +8,7 @@ import '../services/activity_sync_service.dart';
 import '../services/feed_service.dart';
 import '../services/health_service.dart';
 import '../services/pending_activity_store.dart';
+import '../services/profile_service.dart';
 import '../state/session_controller.dart';
 import '../screens/shell/home_shell.dart';
 import 'demo_backend.dart';
@@ -31,6 +32,7 @@ class _DemoAppState extends State<DemoApp> {
   late final DemoActivityService _activityService =
       DemoActivityService(_backend);
   late final DemoFeedService _feedService = DemoFeedService(_backend);
+  late final DemoProfileService _profileService = DemoProfileService(_backend);
   late final ActivitySyncService _syncService = ActivitySyncService(
     _activityService,
     PendingActivityStore(),
@@ -54,6 +56,7 @@ class _DemoAppState extends State<DemoApp> {
         ChangeNotifierProvider<SessionController>.value(value: _session),
         Provider<ActivityService>.value(value: _activityService),
         Provider<FeedService>.value(value: _feedService),
+        Provider<ProfileService>.value(value: _profileService),
         Provider<StepsService>(create: (_) => const ManualStepsService()),
         ChangeNotifierProvider<ActivitySyncService>.value(value: _syncService),
         ChangeNotifierProvider<ThemeController>.value(value: _tema),

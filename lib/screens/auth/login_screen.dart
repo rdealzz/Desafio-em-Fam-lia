@@ -6,6 +6,7 @@ import '../../core/theme/palette.dart';
 import '../../core/theme/tokens.dart';
 import '../../services/app_exception.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/ui/avatar_colors.dart';
 import '../../widgets/ui/inset_group.dart';
 import '../../widgets/ui/pressable.dart';
 
@@ -33,12 +34,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _mostrarSenha = false;
   bool _carregando = false;
   String? _erro;
-  String _avatar = '🙂';
+  int _cor = AvatarColors.opcoes.first.toARGB32();
   String _papel = 'membro';
-
-  static const List<String> _avatares = [
-    '🙂', '😎', '🦸', '🧔', '👩', '👵', '👴', '🐻', '🦊', '🐼',
-  ];
 
   static const Map<String, String> _papeis = {
     'mae': 'Mãe',
@@ -104,8 +101,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   _Campo(
                     controller: _nome,
-                    label: 'Nome',
-                    hint: 'Como a família te chama',
+                    label: 'Nome que aparece para os outros',
+                    hint: 'ex.: Rafael',
                     icon: Icons.person_outline_rounded,
                     capitalize: true,
                   ),
@@ -135,12 +132,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Avatar', style: t.labelLarge),
+                        Text('Sua cor', style: t.labelLarge),
+                        const SizedBox(height: 2),
+                        Text(
+                          'a foto de perfil você escolhe depois, em Editar perfil',
+                          style: t.bodySmall,
+                        ),
                         const SizedBox(height: Space.md),
-                        _SeletorAvatar(
-                          avatares: _avatares,
-                          selecionado: _avatar,
-                          onSelected: (a) => setState(() => _avatar = a),
+                        SeletorCor(
+                          selecionada: _cor,
+                          onSelected: (c) => setState(() => _cor = c),
                         ),
                       ],
                     ),
@@ -167,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 _Campo(
                   controller: _senha,
                   label: 'Senha',
-                  hint: 'mínimo ${AuthService.minSenha} caracteres',
+                  hint: 'pode ser simples, tipo 123',
                   icon: Icons.lock_outline_rounded,
                   obscure: !_mostrarSenha,
                   trailing: GestureDetector(
@@ -297,7 +298,6 @@ class _LoginScreenState extends State<LoginScreen> {
           username: _usuario.text,
           password: _senha.text,
           role: _papel,
-          avatarEmoji: _avatar,
           familyName: _criarFamilia ? _nomeFamilia.text : null,
           inviteCode: _criarFamilia ? null : _convite.text,
         );
@@ -496,47 +496,48 @@ class _Marca extends StatelessWidget {
   }
 }
 
-class _SeletorAvatar extends StatelessWidget {
-  const _SeletorAvatar({
-    required this.avatares,
-    required this.selecionado,
+/// Escolha da cor do perfil.
+class SeletorCor extends StatelessWidget {
+  const SeletorCor({
+    super.key,
+    required this.selecionada,
     required this.onSelected,
   });
 
-  final List<String> avatares;
-  final String selecionado;
-  final ValueChanged<String> onSelected;
+  final int selecionada;
+  final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final p = context.palette;
     return SizedBox(
-      height: 46,
+      height: 44,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: avatares.length,
-        separatorBuilder: (_, __) => const SizedBox(width: Space.sm),
+        itemCount: AvatarColors.opcoes.length,
+        separatorBuilder: (_, __) => const SizedBox(width: Space.md),
         itemBuilder: (context, i) {
-          final emoji = avatares[i];
-          final ativo = emoji == selecionado;
+          final cor = AvatarColors.opcoes[i];
+          final ativo = cor.toARGB32() == selecionada;
           return GestureDetector(
             onTap: () {
               HapticFeedback.selectionClick();
-              onSelected(emoji);
+              onSelected(cor.toARGB32());
             },
             child: AnimatedContainer(
               duration: Motion.fast,
-              width: 46,
+              width: 44,
               decoration: BoxDecoration(
-                color: ativo ? p.accentSoft : p.surfaceSunken,
+                color: cor,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: ativo ? p.accent : Colors.transparent,
-                  width: 2,
+                  color: ativo ? cor : Colors.transparent,
+                  width: 3,
                 ),
               ),
-              alignment: Alignment.center,
-              child: Text(emoji, style: const TextStyle(fontSize: 21)),
+              child: ativo
+                  ? const Icon(Icons.check_rounded,
+                      size: 20, color: Colors.white)
+                  : null,
             ),
           );
         },

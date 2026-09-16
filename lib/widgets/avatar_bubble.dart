@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/palette.dart';
 import '../models/app_user.dart';
+import 'ui/avatar_colors.dart';
 
-/// Avatar do integrante: iniciais num círculo, com anel de status.
+/// Avatar do integrante: foto, ou iniciais num círculo colorido.
 ///
 /// Iniciais em vez de emoji porque o CanvasKit do Flutter web não usa a fonte
 /// de emoji do sistema — no navegador o emoji vira quadradinho. Iniciais
@@ -51,7 +52,10 @@ class AvatarBubble extends StatelessWidget {
         shape: BoxShape.circle,
         border: showRing
             ? Border.all(
-                color: ativo ? p.accent : p.border,
+                // Anel forte em quem treinou hoje, apagado em quem não.
+                color: ativo
+                    ? AvatarColors.resolver(user.avatarColor, user.id)
+                    : p.border,
                 width: ativo ? 2 : 1.5,
               )
             : null,
@@ -79,9 +83,10 @@ class _Iniciais extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.palette;
+    final cor = AvatarColors.resolver(user.avatarColor, user.id);
     return ColoredBox(
-      color: user.isActiveToday ? p.accentSoft : p.surfaceSunken,
+      // Fundo suave da cor escolhida: colorido sem virar bloco chapado.
+      color: Color.alphaBlend(cor.withValues(alpha: 0.16), Colors.white),
       child: Center(
         child: Text(
           AvatarBubble.iniciais(user.displayName),
@@ -89,7 +94,7 @@ class _Iniciais extends StatelessWidget {
             fontSize: size * 0.36,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.3,
-            color: user.isActiveToday ? p.accent : p.textSecondary,
+            color: cor,
           ),
         ),
       ),

@@ -12,6 +12,7 @@ import '../services/activity_service.dart';
 import '../services/app_exception.dart';
 import '../services/feed_service.dart';
 import '../services/points_calculator.dart';
+import '../services/profile_service.dart';
 import '../state/session_controller.dart';
 import 'demo_data.dart';
 
@@ -239,6 +240,17 @@ class DemoBackend extends ChangeNotifier {
     return recebido;
   }
 
+  /// Edição de perfil na demonstração: muda o integrante em memória.
+  void editarPerfil({String? nome, String? papel, int? cor}) {
+    final eu = currentUser;
+    _replaceMember(eu.copyWith(
+      displayName: nome,
+      role: papel,
+      avatarColor: cor,
+    ));
+    notifyListeners();
+  }
+
   void publicar(FeedPost post) {
     _feed = [post, ..._feed];
     _emitFeed();
@@ -427,4 +439,40 @@ class DemoActivityService implements ActivityService {
   Stream<List<ActivityLog>> watchRecentLogs(String familyId,
           {int limit = 30}) =>
       _backend.watchLogs(_backend.currentUser.id);
+}
+
+/// Perfil na vitrine: as mudanças valem enquanto a página estiver aberta.
+class DemoProfileService implements ProfileService {
+  DemoProfileService(this._backend);
+
+  final DemoBackend _backend;
+
+  @override
+  Future<void> salvar({
+    required String userId,
+    String? displayName,
+    String? role,
+    int? avatarColor,
+  }) async {
+    final nome = displayName?.trim();
+    if (nome != null && nome.length < 2) {
+      throw const AppException('O nome precisa de pelo menos 2 letras.');
+    }
+    _backend.editarPerfil(nome: nome, papel: role, cor: avatarColor);
+  }
+
+  @override
+  Future<String> enviarFoto({
+    required String userId,
+    required Uint8List bytes,
+  }) async {
+    // Sem servidor na demonstração: não há onde guardar a foto.
+    throw const AppException(
+      'Esta é uma demonstração — a foto de perfil só é salva no app de '
+      'verdade, com o Firebase ligado.',
+    );
+  }
+
+  @override
+  Future<void> removerFoto(String userId) async {}
 }

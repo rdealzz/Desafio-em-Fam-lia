@@ -11,6 +11,7 @@ class AppUser {
     this.email = '',
     this.role = 'membro',
     this.avatarEmoji = '🙂',
+    this.avatarColor = 0,
     this.photoUrl,
     this.totalPoints = 0,
     this.weeklyPoints = 0,
@@ -36,8 +37,16 @@ class AppUser {
   /// Papel na família: `mae`, `pai`, `filho`, `nora`... usado só para exibição.
   final String role;
 
-  /// Avatar de fallback quando não há foto enviada.
+  /// Emoji herdado dos primeiros cadastros. Não aparece mais na interface
+  /// (no navegador vira quadradinho); fica só para não perder dado antigo.
   final String avatarEmoji;
+
+  /// Cor do perfil, em ARGB. Zero significa "ainda não escolheu" e o app usa
+  /// uma cor derivada do id — assim ninguém começa igual a ninguém.
+  final int avatarColor;
+
+  /// Foto de perfil. Pode ser qualquer imagem: o cachorro, o gato, o que a
+  /// pessoa quiser.
   final String? photoUrl;
 
   /// Pontos acumulados desde sempre (histórico, nunca zera).
@@ -85,6 +94,7 @@ class AppUser {
       role: FirestoreUtils.toStringValue(map['role'], fallback: 'membro'),
       avatarEmoji:
           FirestoreUtils.toStringValue(map['avatarEmoji'], fallback: '🙂'),
+      avatarColor: FirestoreUtils.toInt(map['avatarColor']),
       photoUrl: map['photoUrl'] as String?,
       totalPoints: FirestoreUtils.toInt(map['totalPoints']),
       weeklyPoints: FirestoreUtils.toInt(map['weeklyPoints']),
@@ -105,6 +115,7 @@ class AppUser {
         'email': email,
         'role': role,
         'avatarEmoji': avatarEmoji,
+        'avatarColor': avatarColor,
         'photoUrl': photoUrl,
         'totalPoints': totalPoints,
         'weeklyPoints': weeklyPoints,
@@ -122,6 +133,7 @@ class AppUser {
     String? displayName,
     String? role,
     String? avatarEmoji,
+    int? avatarColor,
     String? photoUrl,
     int? totalPoints,
     int? weeklyPoints,
@@ -140,6 +152,7 @@ class AppUser {
       email: email,
       role: role ?? this.role,
       avatarEmoji: avatarEmoji ?? this.avatarEmoji,
+      avatarColor: avatarColor ?? this.avatarColor,
       photoUrl: photoUrl ?? this.photoUrl,
       totalPoints: totalPoints ?? this.totalPoints,
       weeklyPoints: weeklyPoints ?? this.weeklyPoints,

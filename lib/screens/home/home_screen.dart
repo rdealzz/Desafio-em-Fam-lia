@@ -16,6 +16,7 @@ import '../../widgets/ui/inset_group.dart';
 import '../../widgets/ui/pressable.dart';
 import '../../widgets/vault_progress_card.dart';
 import '../profile/member_profile_screen.dart';
+import '../profile/profile_edit_screen.dart';
 
 /// TELA 1 — A Casa.
 ///
@@ -232,6 +233,12 @@ class _GrupoConta extends StatelessWidget {
             final id = session.user?.id;
             if (id != null) MemberProfileScreen.open(context, id);
           },
+        ),
+        InsetRow(
+          icon: Icons.face_retouching_natural_rounded,
+          title: 'Editar meu perfil',
+          subtitle: 'foto, nome que aparece e cor',
+          onTap: () => ProfileEditScreen.open(context),
         ),
         InsetRow(
           icon: Icons.ios_share_rounded,

@@ -35,7 +35,10 @@ class StorageService {
     required String userId,
     required Uint8List bytes,
   }) async {
-    final ref = _storage.ref('avatars/$userId.jpg');
+    // Pasta por pessoa em vez de "avatars/{uid}.jpg": assim a regra do
+    // Storage compara o uid direto, sem precisar recortar a extensão do nome
+    // com expressão regular.
+    final ref = _storage.ref('avatars/$userId/perfil.jpg');
     await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
     return ref.getDownloadURL();
   }

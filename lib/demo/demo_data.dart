@@ -22,6 +22,8 @@ class DemoData {
 
   static final AppUser eu = AppUser(
     id: 'demo_filho',
+      username: 'rafael',
+      avatarColor: 0xFF2E90FA,
     familyId: familyId,
     displayName: 'Rafael',
     role: 'filho',
@@ -40,6 +42,8 @@ class DemoData {
     eu,
     AppUser(
       id: 'demo_mae',
+      username: 'rosa.maria',
+      avatarColor: 0xFFDB2777,
       familyId: familyId,
       displayName: 'Rosa Maria',
       role: 'mae',
@@ -55,6 +59,8 @@ class DemoData {
     ),
     AppUser(
       id: 'demo_pai',
+      username: 'antonio',
+      avatarColor: 0xFF12A366,
       familyId: familyId,
       displayName: 'Antônio',
       role: 'pai',
@@ -70,6 +76,8 @@ class DemoData {
     ),
     AppUser(
       id: 'demo_nora',
+      username: 'julia',
+      avatarColor: 0xFF8B5CF6,
       familyId: familyId,
       displayName: 'Júlia',
       role: 'membro',

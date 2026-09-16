@@ -17,6 +17,7 @@ import 'services/feed_service.dart';
 import 'services/firestore_refs.dart';
 import 'services/health_service.dart';
 import 'services/pending_activity_store.dart';
+import 'services/profile_service.dart';
 import 'services/storage_service.dart';
 import 'state/session_controller.dart';
 
@@ -60,6 +61,9 @@ class DesafioEmFamiliaApp extends StatelessWidget {
             context.read<PendingActivityStore>(),
           ),
           update: (_, __, ___, previous) => previous!,
+        ),
+        ProxyProvider2<FirestoreRefs, StorageService, ProfileService>(
+          update: (_, refs, storage, __) => ProfileService(refs, storage),
         ),
         ProxyProvider2<FirestoreRefs, FamilyService, AuthService>(
           update: (_, refs, familyService, __) =>
