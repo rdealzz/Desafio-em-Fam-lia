@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/palette.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/utils/firestore_erros.dart';
 import '../../models/feed_post.dart';
 import '../../services/feed_service.dart';
 import '../../state/session_controller.dart';
@@ -80,10 +82,14 @@ class FeedScreen extends StatelessWidget {
                 stream: feedService.watchFeed(family.id),
                 builder: (context, snap) {
                   if (snap.hasError) {
-                    return const _Vazio(
-                      icon: Icons.wifi_off_rounded,
-                      titulo: 'Não consegui carregar',
-                      texto: 'Verifique a conexão e tente de novo.',
+                    final erro = FirestoreErros.traduzir(snap.error);
+                    return _Vazio(
+                      icon: erro.link == null
+                          ? Icons.wifi_off_rounded
+                          : Icons.build_outlined,
+                      titulo: erro.titulo,
+                      texto: erro.texto,
+                      link: erro.link,
                     );
                   }
                   if (!snap.hasData) {
@@ -185,11 +191,17 @@ class _Vazio extends StatelessWidget {
     required this.icon,
     required this.titulo,
     required this.texto,
+    this.link,
   });
 
   final IconData icon;
   final String titulo;
   final String texto;
+
+  /// Endereço que resolve o problema, quando existe. Fica copiável em vez de
+  /// abrir sozinho: quem precisa dele está configurando o projeto, e vai colar
+  /// no navegador onde já está logado no console.
+  final String? link;
 
   @override
   Widget build(BuildContext context) {
@@ -206,6 +218,25 @@ class _Vazio extends StatelessWidget {
             Text(titulo, style: t.titleMedium),
             const SizedBox(height: Space.xs),
             Text(texto, textAlign: TextAlign.center, style: t.bodyMedium),
+            if (link != null) ...[
+              const SizedBox(height: Space.lg),
+              Pressable(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: link!));
+                  HapticFeedback.mediumImpact();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Link copiado — cole no navegador'),
+                    ),
+                  );
+                },
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Space.lg,
+                  vertical: Space.md,
+                ),
+                child: const Text('Copiar o link da correção'),
+              ),
+            ],
           ],
         ),
       ),

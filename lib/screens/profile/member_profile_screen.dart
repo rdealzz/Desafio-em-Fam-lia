@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/palette.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/utils/firestore_erros.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/activity_log.dart';
 import '../../models/app_user.dart';
@@ -73,6 +75,9 @@ class MemberProfileScreen extends StatelessWidget {
               Space.huge,
             ),
             children: [
+              // Sem isto, falha de consulta virava lista vazia — a tela dizia
+              // "nenhum registro" quando o problema era outro.
+              if (snap.hasError) _AvisoErro(erro: snap.error),
               Row(
                 children: [
                   AvatarBubble(user: member, size: 56),
@@ -241,6 +246,67 @@ class _Registro extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Aviso no topo do progresso quando a consulta falha.
+class _AvisoErro extends StatelessWidget {
+  const _AvisoErro({required this.erro});
+
+  final Object? erro;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final traduzido = FirestoreErros.traduzir(erro);
+    final link = traduzido.link;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: Space.lg),
+      padding: const EdgeInsets.all(Space.lg),
+      decoration: BoxDecoration(
+        color: p.energySoft,
+        borderRadius: BorderRadius.circular(Radii.lg),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(traduzido.titulo,
+              style: t.labelLarge?.copyWith(color: p.danger)),
+          const SizedBox(height: Space.xs),
+          Text(
+            traduzido.texto,
+            style: t.bodySmall?.copyWith(color: p.danger, height: 1.45),
+          ),
+          if (link != null) ...[
+            const SizedBox(height: Space.md),
+            GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: link));
+                HapticFeedback.mediumImpact();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Link copiado — cole no navegador'),
+                  ),
+                );
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                children: [
+                  Icon(Icons.copy_rounded, size: 15, color: p.danger),
+                  const SizedBox(width: Space.sm),
+                  Text(
+                    'Copiar o link da correção',
+                    style: t.labelMedium?.copyWith(color: p.danger),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
