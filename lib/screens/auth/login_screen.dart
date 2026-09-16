@@ -6,7 +6,9 @@ import '../../core/theme/palette.dart';
 import '../../core/theme/tokens.dart';
 import '../../services/app_exception.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/ui/avatar_animals.dart';
 import '../../widgets/ui/avatar_colors.dart';
+import '../../widgets/ui/avatar_picker.dart';
 import '../../widgets/ui/inset_group.dart';
 import '../../widgets/ui/pressable.dart';
 
@@ -35,6 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _carregando = false;
   String? _erro;
   int _cor = AvatarColors.opcoes.first.toARGB32();
+  String _bicho = AvatarAnimals.opcoes.first.emoji;
   String _papel = 'membro';
 
   static const Map<String, String> _papeis = {
@@ -132,12 +135,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Sua cor', style: t.labelLarge),
+                        Text('Seu bicho', style: t.labelLarge),
                         const SizedBox(height: 2),
                         Text(
-                          'a foto de perfil você escolhe depois, em Editar perfil',
+                          'é assim que você aparece para a família — dá para '
+                          'trocar por uma foto depois',
                           style: t.bodySmall,
                         ),
+                        const SizedBox(height: Space.lg),
+                        SeletorAnimal(
+                          selecionado: _bicho,
+                          cor: Color(_cor),
+                          onSelected: (b) => setState(() => _bicho = b),
+                        ),
+                        const SizedBox(height: Space.lg),
+                        Text('Cor de fundo', style: t.labelLarge),
                         const SizedBox(height: Space.md),
                         SeletorCor(
                           selecionada: _cor,
@@ -298,6 +310,8 @@ class _LoginScreenState extends State<LoginScreen> {
           username: _usuario.text,
           password: _senha.text,
           role: _papel,
+          avatarEmoji: _bicho,
+          avatarColor: _cor,
           familyName: _criarFamilia ? _nomeFamilia.text : null,
           inviteCode: _criarFamilia ? null : _convite.text,
         );
@@ -492,56 +506,6 @@ class _Marca extends StatelessWidget {
       ativo ? Icons.check_circle_rounded : Icons.circle_outlined,
       size: 21,
       color: ativo ? p.accent : p.borderStrong,
-    );
-  }
-}
-
-/// Escolha da cor do perfil.
-class SeletorCor extends StatelessWidget {
-  const SeletorCor({
-    super.key,
-    required this.selecionada,
-    required this.onSelected,
-  });
-
-  final int selecionada;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: AvatarColors.opcoes.length,
-        separatorBuilder: (_, __) => const SizedBox(width: Space.md),
-        itemBuilder: (context, i) {
-          final cor = AvatarColors.opcoes[i];
-          final ativo = cor.toARGB32() == selecionada;
-          return GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              onSelected(cor.toARGB32());
-            },
-            child: AnimatedContainer(
-              duration: Motion.fast,
-              width: 44,
-              decoration: BoxDecoration(
-                color: cor,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: ativo ? cor : Colors.transparent,
-                  width: 3,
-                ),
-              ),
-              child: ativo
-                  ? const Icon(Icons.check_rounded,
-                      size: 20, color: Colors.white)
-                  : null,
-            ),
-          );
-        },
-      ),
     );
   }
 }

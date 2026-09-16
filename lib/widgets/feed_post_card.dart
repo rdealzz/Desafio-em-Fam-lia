@@ -7,6 +7,7 @@ import '../core/utils/firestore_utils.dart';
 import '../core/utils/formatters.dart';
 import '../models/feed_post.dart';
 import 'avatar_bubble.dart';
+import 'ui/avatar_animals.dart';
 import 'ui/feed_photo.dart';
 import 'ui/primitives.dart';
 import 'ui/reaction_icons.dart';
@@ -32,6 +33,22 @@ class FeedPostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final t = Theme.of(context).textTheme;
+    final temFotoAutor =
+        post.authorPhotoUrl != null && post.authorPhotoUrl!.isNotEmpty;
+    // Aviso do próprio app (prêmio liberado) não tem dono: leva o troféu em
+    // vez de um bicho sorteado, que sugeriria que alguém publicou aquilo.
+    final doApp = post.authorId == 'system';
+    final bichoAutor = ColoredBox(
+      color: doApp ? p.accentSoft : p.surfaceSunken,
+      child: Center(
+        child: doApp
+            ? Icon(Icons.emoji_events_rounded, size: 18, color: p.accent)
+            : AnimalGlyph(
+                emoji: AvatarAnimals.resolver(post.authorAvatar, post.authorId),
+                size: 19,
+              ),
+      ),
+    );
     final temFoto = post.photoUrl != null && post.photoUrl!.isNotEmpty;
 
     return RepaintBoundary(
@@ -55,20 +72,21 @@ class FeedPostCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: p.surfaceSunken,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      AvatarBubble.iniciais(post.authorName),
-                      style: t.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: p.textSecondary,
-                      ),
+                  // Mesmo bicho que aparece no painel: o post guarda o
+                  // avatar de quem publicou, então a linha do mural bate com
+                  // a lista de integrantes.
+                  ClipOval(
+                    child: SizedBox(
+                      width: 34,
+                      height: 34,
+                      child: temFotoAutor
+                          ? Image.network(
+                              post.authorPhotoUrl!,
+                              fit: BoxFit.cover,
+                              cacheWidth: 102,
+                              errorBuilder: (_, __, ___) => bichoAutor,
+                            )
+                          : bichoAutor,
                     ),
                   ),
                   const SizedBox(width: Space.md),

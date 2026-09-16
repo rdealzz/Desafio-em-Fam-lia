@@ -6,7 +6,8 @@ import 'app_exception.dart';
 import 'firestore_refs.dart';
 import 'storage_service.dart';
 
-/// Edição do próprio perfil: nome que aparece para os outros, foto e cor.
+/// Edição do próprio perfil: nome que aparece para os outros, foto, bicho
+/// do avatar e cor de fundo.
 class ProfileService {
   ProfileService(this._refs, this._storage);
 
@@ -20,6 +21,7 @@ class ProfileService {
     required String userId,
     String? displayName,
     String? role,
+    String? avatarEmoji,
     int? avatarColor,
   }) async {
     final dados = <String, dynamic>{
@@ -37,6 +39,7 @@ class ProfileService {
       dados['displayName'] = nome;
     }
     if (role != null) dados['role'] = role;
+    if (avatarEmoji != null) dados['avatarEmoji'] = avatarEmoji;
     if (avatarColor != null) dados['avatarColor'] = avatarColor;
 
     await _refs.user(userId).update(dados);

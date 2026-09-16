@@ -117,6 +117,8 @@ class AuthService {
     required String username,
     required String password,
     required String role,
+    required String avatarEmoji,
+    required int avatarColor,
     String? familyName,
     String? inviteCode,
   }) async {
@@ -159,6 +161,8 @@ class AuthService {
       displayName: name.trim(),
       username: usuario,
       role: role,
+      avatarEmoji: avatarEmoji,
+      avatarColor: avatarColor,
     );
 
     await _refs.user(uid).set({

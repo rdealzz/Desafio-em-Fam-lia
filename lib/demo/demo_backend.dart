@@ -241,11 +241,12 @@ class DemoBackend extends ChangeNotifier {
   }
 
   /// Edição de perfil na demonstração: muda o integrante em memória.
-  void editarPerfil({String? nome, String? papel, int? cor}) {
+  void editarPerfil({String? nome, String? papel, String? bicho, int? cor}) {
     final eu = currentUser;
     _replaceMember(eu.copyWith(
       displayName: nome,
       role: papel,
+      avatarEmoji: bicho,
       avatarColor: cor,
     ));
     notifyListeners();
@@ -452,13 +453,19 @@ class DemoProfileService implements ProfileService {
     required String userId,
     String? displayName,
     String? role,
+    String? avatarEmoji,
     int? avatarColor,
   }) async {
     final nome = displayName?.trim();
     if (nome != null && nome.length < 2) {
       throw const AppException('O nome precisa de pelo menos 2 letras.');
     }
-    _backend.editarPerfil(nome: nome, papel: role, cor: avatarColor);
+    _backend.editarPerfil(
+      nome: nome,
+      papel: role,
+      bicho: avatarEmoji,
+      cor: avatarColor,
+    );
   }
 
   @override

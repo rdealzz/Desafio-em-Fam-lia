@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/palette.dart';
 import '../models/app_user.dart';
+import 'ui/avatar_animals.dart';
 import 'ui/avatar_colors.dart';
 
-/// Avatar do integrante: foto, ou iniciais num círculo colorido.
+/// Avatar do integrante: a foto, se tiver; senão o bicho escolhido sobre um
+/// fundo da cor do perfil.
 ///
-/// Iniciais em vez de emoji porque o CanvasKit do Flutter web não usa a fonte
-/// de emoji do sistema — no navegador o emoji vira quadradinho. Iniciais
-/// sempre renderizam, em qualquer plataforma, e é o que Contatos da Apple,
-/// Slack e Gmail fazem.
+/// O bicho vem de uma fonte de emoji empacotada (ver [AvatarAnimals]) — sem
+/// ela o navegador desenharia quadradinho, que foi o que aconteceu na primeira
+/// versão. Quem ainda não escolheu recebe um bicho sorteado pelo id, então
+/// ninguém abre o app com um círculo vazio.
 ///
 /// O anel cheio marca quem treinou hoje; quem não treinou fica com traço
 /// apagado. Diferença de peso, não de cor berrante.
@@ -24,19 +26,6 @@ class AvatarBubble extends StatelessWidget {
   final AppUser user;
   final double size;
   final bool showRing;
-
-  /// Até duas letras: "Rosa Maria" vira RM, "Rafael" vira R.
-  static String iniciais(String nome) {
-    final partes = nome
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((p) => p.isNotEmpty)
-        .toList();
-    if (partes.isEmpty) return '?';
-    if (partes.length == 1) return partes.first.characters.first.toUpperCase();
-    return (partes.first.characters.first + partes.last.characters.first)
-        .toUpperCase();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,16 +56,16 @@ class AvatarBubble extends StatelessWidget {
                 fit: BoxFit.cover,
                 // Decodifica no tamanho exibido, não no original da câmera.
                 cacheWidth: (size * 3).round(),
-                errorBuilder: (_, __, ___) => _Iniciais(user: user, size: size),
+                errorBuilder: (_, __, ___) => _Bicho(user: user, size: size),
               )
-            : _Iniciais(user: user, size: size),
+            : _Bicho(user: user, size: size),
       ),
     );
   }
 }
 
-class _Iniciais extends StatelessWidget {
-  const _Iniciais({required this.user, required this.size});
+class _Bicho extends StatelessWidget {
+  const _Bicho({required this.user, required this.size});
 
   final AppUser user;
   final double size;
@@ -85,19 +74,42 @@ class _Iniciais extends StatelessWidget {
   Widget build(BuildContext context) {
     final cor = AvatarColors.resolver(user.avatarColor, user.id);
     return ColoredBox(
-      // Fundo suave da cor escolhida: colorido sem virar bloco chapado.
-      color: Color.alphaBlend(cor.withValues(alpha: 0.16), Colors.white),
+      // Fundo suave da cor escolhida: o bicho aparece sobre a cor dele, não
+      // sobre um branco chapado.
+      color: Color.alphaBlend(cor.withValues(alpha: 0.18), Colors.white),
       child: Center(
-        child: Text(
-          AvatarBubble.iniciais(user.displayName),
-          style: TextStyle(
-            fontSize: size * 0.36,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.3,
-            color: cor,
-          ),
+        child: AnimalGlyph(
+          emoji: AvatarAnimals.resolver(user.avatarEmoji, user.id),
+          // Deixa uma margem para o bicho não encostar na borda do círculo.
+          size: size * 0.56,
         ),
       ),
+    );
+  }
+}
+
+/// Desenha um emoji de bicho com a fonte empacotada.
+///
+/// Existe como widget próprio para o nome da família da fonte ficar num lugar
+/// só: se o recorte da fonte mudar de nome, muda aqui.
+class AnimalGlyph extends StatelessWidget {
+  const AnimalGlyph({super.key, required this.emoji, required this.size});
+
+  final String emoji;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      emoji,
+      style: TextStyle(
+        fontFamily: AvatarAnimals.fontFamily,
+        fontSize: size,
+        // A Noto Color Emoji é de bitmap e vem com entrelinha folgada; sem
+        // travar a altura o desenho fica descentralizado no círculo.
+        height: 1.0,
+      ),
+      textAlign: TextAlign.center,
     );
   }
 }

@@ -10,9 +10,11 @@ import '../../services/auth_service.dart';
 import '../../services/profile_service.dart';
 import '../../state/session_controller.dart';
 import '../../widgets/avatar_bubble.dart';
+import '../../widgets/ui/avatar_animals.dart';
+import '../../widgets/ui/avatar_colors.dart';
+import '../../widgets/ui/avatar_picker.dart';
 import '../../widgets/ui/inset_group.dart';
 import '../../widgets/ui/pressable.dart';
-import '../auth/login_screen.dart' show SeletorCor;
 
 /// Editar o próprio perfil: foto, nome que aparece para os outros, cor e senha.
 class ProfileEditScreen extends StatefulWidget {
@@ -33,6 +35,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final TextEditingController _nome = TextEditingController();
 
   int? _cor;
+  String? _bicho;
   String? _papel;
   bool _salvando = false;
   bool _enviandoFoto = false;
@@ -71,10 +74,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       _iniciado = true;
       _nome.text = user.displayName;
       _cor = user.avatarColor;
+      _bicho = user.avatarEmoji;
       _papel = user.role;
     }
 
     final corAtual = _cor ?? user.avatarColor;
+    final bichoAtual =
+        AvatarAnimals.resolver(_bicho ?? user.avatarEmoji, user.id);
     final temFoto = user.photoUrl != null && user.photoUrl!.isNotEmpty;
 
     return Scaffold(
@@ -222,7 +228,22 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Sua cor', style: t.labelLarge),
+                    Text('Seu bicho', style: t.labelLarge),
+                    const SizedBox(height: 2),
+                    Text(
+                      temFoto
+                          ? 'aparece se você tirar a foto'
+                          : 'é assim que você aparece para a família',
+                      style: t.bodySmall,
+                    ),
+                    const SizedBox(height: Space.lg),
+                    SeletorAnimal(
+                      selecionado: bichoAtual,
+                      cor: AvatarColors.resolver(corAtual, user.id),
+                      onSelected: (b) => setState(() => _bicho = b),
+                    ),
+                    const SizedBox(height: Space.lg),
+                    Text('Cor de fundo', style: t.labelLarge),
                     const SizedBox(height: Space.md),
                     SeletorCor(
                       selecionada: corAtual,
@@ -358,6 +379,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             userId: user.id,
             displayName: _nome.text,
             role: _papel,
+            avatarEmoji: _bicho,
             avatarColor: _cor,
           );
       if (!mounted) return;

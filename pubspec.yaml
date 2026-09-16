@@ -52,3 +52,11 @@ flutter:
           weight: 600
         - asset: assets/fonts/Inter-ExtraBold.ttf
           weight: 800
+
+    # Emoji de bicho para os avatares. Recorte da Noto Color Emoji (OFL) com
+    # só os 22 desenhos usados: 44 KB em vez dos 10 MB do arquivo completo.
+    # Empacotada porque o CanvasKit do Flutter web ignora a fonte de emoji do
+    # sistema e desenharia quadradinho no navegador.
+    - family: AnimalEmoji
+      fonts:
+        - asset: assets/fonts/AnimalEmoji.ttf

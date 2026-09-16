@@ -10,7 +10,7 @@ class AppUser {
     this.username = '',
     this.email = '',
     this.role = 'membro',
-    this.avatarEmoji = '🙂',
+    this.avatarEmoji = '',
     this.avatarColor = 0,
     this.photoUrl,
     this.totalPoints = 0,
@@ -37,8 +37,9 @@ class AppUser {
   /// Papel na família: `mae`, `pai`, `filho`, `nora`... usado só para exibição.
   final String role;
 
-  /// Emoji herdado dos primeiros cadastros. Não aparece mais na interface
-  /// (no navegador vira quadradinho); fica só para não perder dado antigo.
+  /// O bicho do avatar (🦊, 🐻, 🐼...). Vazio, ou um emoji fora da lista de
+  /// [AvatarAnimals], significa "ainda não escolheu" e o app sorteia um pelo
+  /// id — cadastro antigo guardou '🙂' aqui, que cai nesse caso.
   final String avatarEmoji;
 
   /// Cor do perfil, em ARGB. Zero significa "ainda não escolheu" e o app usa
@@ -92,8 +93,7 @@ class AppUser {
       username: FirestoreUtils.toStringValue(map['username']),
       email: FirestoreUtils.toStringValue(map['email']),
       role: FirestoreUtils.toStringValue(map['role'], fallback: 'membro'),
-      avatarEmoji:
-          FirestoreUtils.toStringValue(map['avatarEmoji'], fallback: '🙂'),
+      avatarEmoji: FirestoreUtils.toStringValue(map['avatarEmoji']),
       avatarColor: FirestoreUtils.toInt(map['avatarColor']),
       photoUrl: map['photoUrl'] as String?,
       totalPoints: FirestoreUtils.toInt(map['totalPoints']),
