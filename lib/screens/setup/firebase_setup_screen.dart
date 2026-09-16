@@ -113,17 +113,27 @@ class FirebaseSetupScreen extends StatelessWidget {
 
                 const _Passo(
                   numero: '1',
-                  icone: Icons.rocket_launch_rounded,
-                  titulo: 'Ligar no seu projeto Firebase',
-                  corpo: 'Rode na sua máquina, dentro da pasta do projeto. Ele '
-                      'abre o navegador para você entrar com a sua conta '
-                      'Google, cria o projeto, gera as chaves e publica as '
-                      'regras de segurança.',
-                  comando: './scripts/setup_firebase.sh',
+                  icone: Icons.content_paste_rounded,
+                  titulo: 'Já criei o projeto no console',
+                  corpo: 'No console, em Criar aplicativo → Web, aparece um '
+                      'bloco "const firebaseConfig = { ... }". Copie ele '
+                      'inteiro e cole no script — ele preenche as chaves '
+                      'sozinho. Não precisa de Node nem de CLI.',
+                  comando: './scripts/aplicar_chaves.py',
                 ),
                 const SizedBox(height: Space.lg),
                 const _Passo(
                   numero: '2',
+                  icone: Icons.rocket_launch_rounded,
+                  titulo: 'Fazer tudo pelo terminal',
+                  corpo: 'Abre o navegador para você entrar com a sua conta '
+                      'Google, cria o projeto, gera as chaves de web, Android '
+                      'e iOS, e publica as regras de segurança.',
+                  comando: './scripts/setup_firebase.sh',
+                ),
+                const SizedBox(height: Space.lg),
+                const _Passo(
+                  numero: '3',
                   icone: Icons.science_outlined,
                   titulo: 'Ou só experimentar, sem criar conta',
                   corpo: 'O emulador roda tudo no seu computador: dá para usar '

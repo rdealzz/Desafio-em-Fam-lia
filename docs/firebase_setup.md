@@ -1,7 +1,9 @@
 # Ligando o Firebase
 
 Dois caminhos. O primeiro não precisa de conta nenhuma e serve para ver o app
-funcionando hoje; o segundo é o que a família vai usar de verdade.
+funcionando hoje; o segundo é o que a família vai usar de verdade — e dentro
+dele há uma via que não exige instalar ferramenta nenhuma, só copiar as chaves
+do console.
 
 ---
 
@@ -41,6 +43,48 @@ automaticamente.
 ---
 
 ## Caminho B — Projeto Firebase real
+
+### Sem instalar nada: copiar as chaves do console
+
+Serve para quem não tem Flutter nem Node na máquina, ou não quer mexer em CLI.
+Tudo pelo navegador, e depois um comando só.
+
+1. <https://console.firebase.google.com> → **Adicionar projeto**
+2. Dentro do projeto, **Criar aplicativo → Web** (o ícone `</>`), dá um apelido
+   qualquer e registra
+3. O console mostra um bloco assim — **copie ele inteiro**:
+
+   ```js
+   const firebaseConfig = {
+     apiKey: "AIza...",
+     authDomain: "seu-projeto.firebaseapp.com",
+     projectId: "seu-projeto",
+     storageBucket: "seu-projeto.firebasestorage.app",
+     messagingSenderId: "123456789012",
+     appId: "1:123456789012:web:abc123"
+   };
+   ```
+
+4. Cole no script, que preenche `lib/firebase_options.dart`:
+
+   ```bash
+   ./scripts/aplicar_chaves.py      # cola e termina com Ctrl-D
+   ```
+
+5. `git add lib/firebase_options.dart && git commit -m "chaves" && git push`
+
+Ainda no console, ative os três serviços da tabela mais abaixo, e acrescente o
+domínio publicado em **Authentication → Settings → Authorized domains** — sem
+isso o login falha no navegador, mesmo com as chaves certas.
+
+> Isso liga a **versão web**, que é a que a família abre por link. Para compilar
+> o app nativo de Android/iOS ainda é preciso o `flutterfire configure`, que
+> gera também as seções `android` e `ios`.
+
+> **As chaves podem ficar no repositório, mesmo público.** Chave de cliente do
+> Firebase é pública por natureza — ela identifica o projeto, não autoriza
+> nada. Quem protege os dados são as regras em `firestore.rules` e
+> `storage.rules`.
 
 ### Não tenho projeto ainda
 

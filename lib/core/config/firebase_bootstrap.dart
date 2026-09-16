@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -58,6 +60,16 @@ class FirebaseBootstrap {
   /// Firebase CLI: nenhuma chamada escapa para a nuvem.
   static const String demoProjectId = 'demo-desafio-em-familia';
 
+  /// Teto para o arranque.
+  ///
+  /// No navegador, os plugins do Firebase carregam o SDK JavaScript do
+  /// gstatic.com em tempo de execução. Se essa busca não voltar — rede
+  /// caída, gstatic bloqueado por firewall ou por uma extensão —, o
+  /// `initializeApp` fica pendurado e o app nunca sai da tela de carregando.
+  /// Com o teto, ele desiste e mostra a tela de configuração dizendo o que
+  /// houve, que é sempre melhor do que uma tela parada sem explicação.
+  static const Duration tempoLimite = Duration(seconds: 15);
+
   static const FirebaseOptions _emulatorOptions = FirebaseOptions(
     apiKey: 'demo-api-key',
     appId: '1:000000000000:android:0000000000000000',
@@ -95,13 +107,23 @@ class FirebaseBootstrap {
         options: useEmulators
             ? _emulatorOptions
             : DefaultFirebaseOptions.currentPlatform,
-      );
+      ).timeout(tempoLimite);
 
       if (useEmulators) {
-        await _connectEmulators();
+        await _connectEmulators().timeout(tempoLimite);
       }
 
       return const FirebaseStartup(FirebaseStartupStatus.ready);
+    } on TimeoutException {
+      return FirebaseStartup(
+        FirebaseStartupStatus.failed,
+        detail: useEmulators
+            ? 'Os emuladores não responderam em ${tempoLimite.inSeconds}s. '
+                'Confira se ./scripts/run_emulators.sh está rodando.'
+            : 'O Firebase não respondeu em ${tempoLimite.inSeconds}s. '
+                'Quase sempre é a internet, ou algo bloqueando o '
+                'gstatic.com, de onde o navegador baixa o SDK.',
+      );
     } on FirebaseException catch (e) {
       return FirebaseStartup(
         FirebaseStartupStatus.failed,
