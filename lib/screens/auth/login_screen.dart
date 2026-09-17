@@ -201,6 +201,29 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
 
+            // Só em quem está entrando: no cadastro a senha ainda vai ser
+            // escolhida, e o link ali só confundiria.
+            if (!_criandoConta) ...[
+              const SizedBox(height: Space.md),
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: _carregando ? null : _esqueciSenha,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Space.xs,
+                      vertical: Space.sm,
+                    ),
+                    child: Text(
+                      'Esqueci minha senha',
+                      style: t.labelMedium?.copyWith(color: p.accent),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
             if (_criandoConta) ...[
               const SizedBox(height: Space.xl),
               InsetGroup(
@@ -295,6 +318,74 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _esqueciSenha() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final auth = context.read<AuthService>();
+    final usuario = _usuario.text.trim();
+
+    if (usuario.isEmpty) {
+      setState(() => _erro = 'Escreva seu usuário primeiro.');
+      return;
+    }
+
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (dialogo) => AlertDialog(
+        title: const Text('Recuperar a senha'),
+        content: Text(
+          'Vou mandar um e-mail de redefinição para o endereço cadastrado '
+          'em "$usuario".\n\n'
+          'Quem nunca cadastrou e-mail não tem como recuperar — nesse caso, '
+          'peça para alguém da família entrar na conta e cadastrar um, ou crie '
+          'uma conta nova.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogo).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogo).pop(true),
+            child: const Text('Mandar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true) return;
+
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+    try {
+      final destino = await auth.enviarRedefinicaoDeSenha(usuario);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('E-mail enviado para ${_esconder(destino)}'),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } on AppException catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _erro = 'Não consegui enviar agora. Tente de novo.');
+      }
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
+
+  /// "rafael@gmail.com" vira "ra****@gmail.com".
+  ///
+  /// Confirma para o dono que é a conta certa sem mostrar o endereço de
+  /// alguém da família para quem estiver com o celular na mão.
+  static String _esconder(String email) {
+    final corte = email.indexOf('@');
+    if (corte <= 2) return email;
+    return '${email.substring(0, 2)}****${email.substring(corte)}';
   }
 
   Future<void> _enviar() async {

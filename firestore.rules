@@ -100,6 +100,30 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // --- usernames --------------------------------------------------------
+    // Mapa apelido → conta. A tela de entrada precisa lê-lo ANTES de haver
+    // sessão, para descobrir com qual e-mail o Firebase conhece a pessoa — é
+    // o que deixa cadastrar e-mail de recuperação sem quebrar o login por
+    // apelido.
+    //
+    // `get` liberado, `list` não: quem souber um apelido lê aquele apelido, e
+    // ninguém varre a coleção atrás dos e-mails da família. O documento não
+    // guarda senha nem nada derivado dela — saber o e-mail de alguém não abre
+    // porta nenhuma.
+    match /usernames/{apelido} {
+      allow get: if true;
+      allow list: if false;
+
+      // Cada um escreve só o próprio: o documento precisa apontar para o uid
+      // de quem está escrevendo, e um apelido já tomado não muda de dono.
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid;
+      allow update: if isSignedIn() &&
+        resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid;
+      allow delete: if false;
+    }
+
     // --- families ---------------------------------------------------------
     match /families/{familyId} {
       // Leitura liberada para quem já é membro; a busca por código de convite

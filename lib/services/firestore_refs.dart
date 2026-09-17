@@ -14,6 +14,11 @@ class FirestoreRefs {
   static const String activityLogsCollection = 'activity_logs';
   static const String feedPostsCollection = 'feed_posts';
 
+  /// Apelido → conta. Existe porque a tela de entrada precisa descobrir com
+  /// qual e-mail o Firebase conhece a pessoa ANTES de ela estar autenticada —
+  /// e é o que permite trocar esse e-mail sem quebrar o login por apelido.
+  static const String usernamesCollection = 'usernames';
+
   FirebaseFirestore get db => _db;
 
   CollectionReference<Map<String, dynamic>> get users =>
@@ -28,7 +33,13 @@ class FirestoreRefs {
   CollectionReference<Map<String, dynamic>> get feedPosts =>
       _db.collection(feedPostsCollection);
 
+  CollectionReference<Map<String, dynamic>> get usernames =>
+      _db.collection(usernamesCollection);
+
   DocumentReference<Map<String, dynamic>> user(String uid) => users.doc(uid);
+
+  DocumentReference<Map<String, dynamic>> username(String apelido) =>
+      usernames.doc(apelido);
 
   DocumentReference<Map<String, dynamic>> family(String familyId) =>
       families.doc(familyId);

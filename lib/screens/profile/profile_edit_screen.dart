@@ -258,6 +258,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
           InsetGroup(
             header: 'Conta',
+            footer: 'Sem e-mail cadastrado não existe recuperação: quem '
+                'esquecer a senha precisa de conta nova. Vale cadastrar antes '
+                'de precisar.',
             children: [
               InsetRow(
                 icon: Icons.lock_outline_rounded,
@@ -265,6 +268,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 subtitle: 'precisa saber a senha atual',
                 onTap: () => _trocarSenha(context),
               ),
+              Builder(builder: (context) {
+                final email = context.read<AuthService>().emailDeRecuperacao;
+                return InsetRow(
+                  icon: email == null
+                      ? Icons.mail_outline_rounded
+                      : Icons.mark_email_read_outlined,
+                  tint: email == null ? p.warning : null,
+                  title: 'E-mail para recuperar a senha',
+                  subtitle: email ?? 'nenhum — você não conseguirá recuperar',
+                  onTap: () => _cadastrarEmail(context),
+                );
+              }),
             ],
           ),
           const SizedBox(height: Space.xxl),
@@ -394,6 +409,81 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       );
     } finally {
       if (mounted) setState(() => _salvando = false);
+    }
+  }
+
+  Future<void> _cadastrarEmail(BuildContext context) async {
+    final campo = TextEditingController(
+      text: context.read<AuthService>().emailDeRecuperacao ?? '',
+    );
+    final messenger = ScaffoldMessenger.of(context);
+    final auth = context.read<AuthService>();
+
+    final email = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (folha) => Padding(
+        padding: EdgeInsets.only(
+          left: Space.gutter,
+          right: Space.gutter,
+          top: Space.xl,
+          bottom: MediaQuery.of(folha).viewInsets.bottom + Space.xl,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('E-mail para recuperar a senha',
+                style: Theme.of(folha).textTheme.titleLarge),
+            const SizedBox(height: Space.sm),
+            Text(
+              'Serve só para isto: se você esquecer a senha, o link de '
+              'redefinição chega nesse endereço. Você continua entrando pelo '
+              'usuário, não pelo e-mail.',
+              style: Theme.of(folha).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: Space.lg),
+            TextField(
+              controller: campo,
+              autofocus: true,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                labelText: 'Seu e-mail',
+                hintText: 'ex.: rafael@gmail.com',
+                prefixIcon: Icon(Icons.mail_outline_rounded),
+              ),
+            ),
+            const SizedBox(height: Space.lg),
+            Pressable(
+              onPressed: () => Navigator.of(folha).pop(campo.text.trim()),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: const Text('Mandar confirmação'),
+            ),
+          ],
+        ),
+      ),
+    );
+    campo.dispose();
+    if (email == null || email.isEmpty) return;
+
+    try {
+      await auth.cadastrarEmailDeRecuperacao(email);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Mandei um link de confirmação para $email. Abra e clique — até '
+            'lá nada muda.',
+          ),
+          duration: const Duration(seconds: 7),
+        ),
+      );
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Não consegui mandar agora.')),
+      );
     }
   }
 
