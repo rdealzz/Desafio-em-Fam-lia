@@ -91,31 +91,40 @@ class AuthService {
   static String _emailDe(String usuario) =>
       '${normalizarUsuario(usuario)}@$_dominio';
 
-  /// Os e-mails com que vale a pena tentar entrar, na ordem.
+  /// O e-mail real da conta, segundo o mapa — ou `null` se ela nunca trocou.
   ///
-  /// O primeiro é o apelido@domínio de sempre, que atende todo mundo que nunca
-  /// cadastrou e-mail de recuperação — é o caminho de 99% dos logins, e por
-  /// isso vem antes de qualquer leitura no Firestore.
-  Future<List<String>> _emailsPossiveis(String usuario) async {
-    final padrao = _emailDe(usuario);
+  /// Prefere `authEmail`, que é reescrito a cada login com o endereço que o
+  /// Firebase realmente usa. `pendingEmail` só entra quando `authEmail` ainda
+  /// é o interno: é a janela entre a pessoa confirmar a troca pelo link e o
+  /// primeiro login depois disso, quando o mapa ainda não sabe da mudança.
+  Future<String?> _emailRealDe(String usuario) async {
     try {
       final mapa = await _refs.username(normalizarUsuario(usuario)).get();
       final dados = mapa.data();
-      if (dados == null) return [padrao];
-      // `pendingEmail` entra na lista porque o Firebase só troca o e-mail da
-      // conta quando a pessoa clica no link de confirmação — e nós não ficamos
-      // sabendo da hora. Sem ele, o primeiro login depois da confirmação
-      // falharia e trancaria a pessoa para fora.
-      return {
-        padrao,
-        if (dados['authEmail'] is String) dados['authEmail'] as String,
-        if (dados['pendingEmail'] is String) dados['pendingEmail'] as String,
-      }.where((e) => e.isNotEmpty).toList();
+      if (dados == null) return null;
+      for (final campo in ['authEmail', 'pendingEmail']) {
+        final valor = dados[campo];
+        if (valor is String && valor.isNotEmpty && !_ehInterno(valor)) {
+          return valor;
+        }
+      }
     } catch (_) {
       // Mapa indisponível não pode impedir o login normal.
-      return [padrao];
     }
+    return null;
   }
+
+  static bool _ehInterno(String email) => email.endsWith('@$_dominio');
+
+  /// Erros que só significam "essa combinação não é a certa" — os únicos em
+  /// que vale tentar a próxima. Conta desativada, rede fora ou excesso de
+  /// tentativas não melhoram insistindo, e insistir piora o excesso.
+  static const Set<String> _errosDeCredencial = {
+    'user-not-found',
+    'wrong-password',
+    'invalid-credential',
+    'invalid-login-credentials',
+  };
 
   Future<void> signIn({
     required String username,
@@ -124,53 +133,65 @@ class AuthService {
     final erro = validarUsuario(username);
     if (erro != null) throw AppException(erro);
 
-    FirebaseAuthException? ultimo;
-
-    // Duas senhas por e-mail: a do app (com o sufixo) e a crua.
+    // No máximo três tentativas, e uma só no caso comum.
     //
-    // A crua existe por causa da recuperação: quem redefine pelo link do
-    // e-mail digita a senha na página do Firebase, que não conhece o sufixo.
-    // Sem esta segunda tentativa, a pessoa redefiniria a senha e continuaria
-    // sem conseguir entrar — recuperação que não recupera.
-    for (final email in await _emailsPossiveis(username)) {
-      for (final senha in [_senhaReal(password), password]) {
+    // Cada tentativa falha conta para o limite do Firebase, que bloqueia a
+    // conta por um tempo depois de algumas — com a combinação de todos os
+    // e-mails contra todas as senhas, dois erros de digitação bastavam para
+    // trancar a pessoa para fora. Por isso o caminho de sempre vem primeiro e
+    // sozinho, e o resto só entra se houver e-mail real cadastrado.
+    final padrao = _emailDe(username);
+    final tentativa = await _tentar(padrao, _senhaReal(password), username);
+    if (tentativa) return;
+
+    final real = await _emailRealDe(username);
+    if (real != null && real != padrao) {
+      if (await _tentar(real, _senhaReal(password), username)) return;
+      // A senha crua só faz sentido aqui: quem redefiniu pelo link do e-mail
+      // digitou a senha na página do Firebase, que não conhece o sufixo — e
+      // redefinir por link exige justamente ter e-mail real.
+      if (await _tentar(real, password, username, crua: true)) return;
+    }
+
+    throw AppException(_mensagem(
+      _ultimoErro ?? FirebaseAuthException(code: 'invalid-credential'),
+    ));
+  }
+
+  FirebaseAuthException? _ultimoErro;
+
+  /// Uma tentativa de entrada. `true` se entrou; `false` se foi só credencial
+  /// errada. Qualquer outro erro sobe na hora, sem gastar outra tentativa.
+  Future<bool> _tentar(
+    String email,
+    String senha,
+    String usuario, {
+    bool crua = false,
+  }) async {
+    try {
+      final credencial = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: senha,
+      );
+      if (crua) {
+        // Devolve a conta à convenção do app, para a pessoa seguir digitando
+        // a mesma coisa e cair no caminho curto na próxima vez.
         try {
-          final credencial = await _auth.signInWithEmailAndPassword(
-            email: email,
-            password: senha,
-          );
-          // Senha crua significa que veio da página de redefinição: devolve a
-          // conta à convenção do app, para a pessoa seguir digitando o mesmo.
-          if (senha == password) {
-            try {
-              await credencial.user?.updatePassword(_senhaReal(password));
-            } catch (_) {
-              // Se não der, o login desta vez já funcionou e a próxima
-              // tentativa cai de novo no caminho da senha crua.
-            }
-          }
-          await _anotarMapa(usuario: username, conta: credencial.user);
-          return;
-        } on FirebaseAuthException catch (e) {
-          ultimo = e;
-          // Só vale insistir enquanto o erro for de credencial. Conta
-          // desativada, rede fora ou excesso de tentativas não melhoram com
-          // mais tentativas — e mais tentativas pioram o excesso.
-          const insistir = {
-            'user-not-found',
-            'wrong-password',
-            'invalid-credential',
-            'invalid-login-credentials',
-          };
-          if (!insistir.contains(e.code)) {
-            throw AppException(_mensagem(e));
-          }
+          await credencial.user?.updatePassword(_senhaReal(senha));
+        } catch (_) {
+          // Se não der, o login desta vez já valeu e a próxima repete por aqui.
         }
       }
+      await _anotarMapa(usuario: usuario, conta: credencial.user);
+      _ultimoErro = null;
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _ultimoErro = e;
+      if (!_errosDeCredencial.contains(e.code)) {
+        throw AppException(_mensagem(e));
+      }
+      return false;
     }
-    throw AppException(_mensagem(
-      ultimo ?? FirebaseAuthException(code: 'invalid-credential'),
-    ));
   }
 
   /// Mantém `usernames/{apelido}` apontando para o e-mail atual da conta.
@@ -202,7 +223,7 @@ class AuthService {
   /// O apelido@domínio interno não conta: ele não recebe mensagem nenhuma.
   String? get emailDeRecuperacao {
     final email = _auth.currentUser?.email;
-    if (email == null || email.endsWith('@$_dominio')) return null;
+    if (email == null || _ehInterno(email)) return null;
     return email;
   }
 
@@ -220,7 +241,7 @@ class AuthService {
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(limpo)) {
       throw const AppException('Esse e-mail não parece válido.');
     }
-    if (limpo.toLowerCase().endsWith('@$_dominio')) {
+    if (_ehInterno(limpo.toLowerCase())) {
       throw const AppException('Use um e-mail de verdade, que você abre.');
     }
     try {
@@ -245,18 +266,31 @@ class AuthService {
     if (erro != null) throw AppException(erro);
 
     String? destino;
+    String? pendente;
     try {
       final mapa = await _refs.username(normalizarUsuario(username)).get();
       final dados = mapa.data();
-      for (final campo in ['authEmail', 'pendingEmail']) {
-        final valor = dados?[campo];
-        if (valor is String && !valor.endsWith('@$_dominio')) {
-          destino = valor;
-          break;
-        }
+      final autenticado = dados?['authEmail'];
+      if (autenticado is String && !_ehInterno(autenticado)) {
+        destino = autenticado;
+      }
+      final aguardando = dados?['pendingEmail'];
+      if (aguardando is String && !_ehInterno(aguardando)) {
+        pendente = aguardando;
       }
     } catch (_) {
       throw const AppException('Não consegui consultar agora. Tente de novo.');
+    }
+
+    // Só o e-mail JÁ confirmado serve. Mandar para um que ainda aguarda
+    // confirmação falha no Firebase, que ainda não conhece aquele endereço, e
+    // a pessoa receberia "usuário ou senha incorretos" — beco sem saída bem na
+    // hora em que ela mais precisa de uma instrução clara.
+    if (destino == null && pendente != null) {
+      throw const AppException(
+        'O e-mail cadastrado ainda não foi confirmado. Procure a mensagem de '
+        'confirmação do Firebase na caixa de entrada e clique no link.',
+      );
     }
 
     if (destino == null) {

@@ -114,13 +114,27 @@ service cloud.firestore {
       allow get: if true;
       allow list: if false;
 
-      // Cada um escreve só o próprio: o documento precisa apontar para o uid
-      // de quem está escrevendo, e um apelido já tomado não muda de dono.
+      // Só dá para escrever o apelido que é seu DE VERDADE: o documento tem
+      // de apontar para o seu uid e o seu perfil tem de carregar esse mesmo
+      // apelido.
+      //
+      // Sem a segunda metade, qualquer pessoa logada criava
+      // `usernames/<apelido dos outros>` apontando para si. Como `update` só
+      // deixa o dono do documento mexer, o dono legítimo do apelido nunca mais
+      // conseguiria gravar o dele — e ficaria sem recuperação de senha, sem
+      // nem saber por quê.
+      function meuApelido(apelido) {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid))
+               .data.get('username', '') == apelido;
+      }
+
       allow create: if isSignedIn() &&
-        request.resource.data.uid == request.auth.uid;
+        request.resource.data.uid == request.auth.uid &&
+        meuApelido(apelido);
       allow update: if isSignedIn() &&
         resource.data.uid == request.auth.uid &&
-        request.resource.data.uid == request.auth.uid;
+        request.resource.data.uid == request.auth.uid &&
+        meuApelido(apelido);
       allow delete: if false;
     }
 

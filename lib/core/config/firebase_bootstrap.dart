@@ -113,7 +113,7 @@ class FirebaseBootstrap {
         await _connectEmulators().timeout(tempoLimite);
       }
 
-      await _manterSessao();
+      await _manterSessao();  // tem prazo próprio, ver o método
 
       return const FirebaseStartup(FirebaseStartupStatus.ready);
     } on TimeoutException {
@@ -150,7 +150,14 @@ class FirebaseBootstrap {
   static Future<void> _manterSessao() async {
     if (!kIsWeb) return;
     try {
-      await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+      // Prazo próprio, e curto: num navegador embutido com armazenamento
+      // travado esta chamada pode não voltar, e ela roda depois do prazo do
+      // `initializeApp` — sem isto, reproduziria exatamente a tela de
+      // carregando eterna que aquele prazo existe para evitar. Guardar a
+      // sessão é conforto; nunca vale prender o arranque.
+      await FirebaseAuth.instance
+          .setPersistence(Persistence.LOCAL)
+          .timeout(const Duration(seconds: 4));
     } catch (_) {
       // Sem armazenamento disponível a sessão vale só enquanto a aba estiver
       // aberta. Não é motivo para impedir o uso — é motivo para instalar o app

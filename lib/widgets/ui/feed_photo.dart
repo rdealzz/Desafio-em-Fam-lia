@@ -16,10 +16,12 @@ import '../../services/photo_proof.dart';
 /// Atende as duas origens: a foto nova, em base64 dentro do documento, e a
 /// antiga, no Storage por endereço.
 class FeedPhoto extends StatefulWidget {
-  const FeedPhoto({super.key, this.bytes, this.url})
-      : assert(bytes != null || url != null, 'precisa de bytes ou endereço');
+  const FeedPhoto({super.key, this.dados, this.url})
+      : assert(dados != null || url != null, 'precisa de dados ou endereço');
 
-  final Uint8List? bytes;
+  /// A foto ainda em base64. A decodificação acontece no estado, uma vez por
+  /// post — ver [_FeedPhotoState._decodificar].
+  final String? dados;
   final String? url;
 
   /// Decide o que mostrar para um post, ou `null` quando não há foto válida.
@@ -27,13 +29,21 @@ class FeedPhoto extends StatefulWidget {
   /// Foto vencida não aparece nem quando os bytes ainda estão no documento: a
   /// limpeza acontece quando alguém abre o app, e até lá o combinado de um dia
   /// tem de valer mesmo assim.
+  ///
+  /// A chave é o id do post porque o Flutter reaproveita o estado por posição
+  /// na lista: sem ela, uma foto quebrada marcava a posição, e o post que
+  /// depois ocupasse aquela posição aparecia sem a foto dele.
   static FeedPhoto? para(FeedPost post) {
     if (!PhotoProof.venceu(post.photoExpiresAt)) {
-      final bytes = PhotoProof.decodificar(post.photoData);
-      if (bytes != null) return FeedPhoto(bytes: bytes);
+      final dados = post.photoData;
+      if (dados != null && dados.isNotEmpty) {
+        return FeedPhoto(key: ValueKey('foto-${post.id}'), dados: dados);
+      }
     }
     final url = post.photoUrl;
-    if (url != null && url.isNotEmpty) return FeedPhoto(url: url);
+    if (url != null && url.isNotEmpty) {
+      return FeedPhoto(key: ValueKey('foto-${post.id}'), url: url);
+    }
     return null;
   }
 
@@ -43,6 +53,37 @@ class FeedPhoto extends StatefulWidget {
 
 class _FeedPhotoState extends State<FeedPhoto> {
   bool _falhou = false;
+  Uint8List? _bytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _decodificar();
+  }
+
+  @override
+  void didUpdateWidget(FeedPhoto anterior) {
+    super.didUpdateWidget(anterior);
+    if (anterior.dados != widget.dados || anterior.url != widget.url) {
+      // Conteúdo diferente merece chance nova: sem isto, o estado de falha
+      // ficava grudado no lugar mesmo depois de a foto mudar.
+      _falhou = false;
+      _decodificar();
+    }
+  }
+
+  /// Decodifica uma vez e guarda os bytes.
+  ///
+  /// Fazer isso no `build` seria refazer o trabalho a cada quadro — e pior:
+  /// `Image.memory` guarda o cache pela identidade da lista de bytes, então
+  /// uma lista nova a cada construção nunca acerta o cache e a imagem é
+  /// decodificada de novo inteira. No mural, qualquer reação de qualquer um
+  /// reconstrói a lista.
+  void _decodificar() {
+    final dados = widget.dados;
+    _bytes = dados == null ? null : PhotoProof.decodificar(dados);
+    if (dados != null && _bytes == null) _falhou = true;
+  }
 
   void _marcarFalha() {
     // Agenda para depois do quadro: chamar setState durante a construção
@@ -56,7 +97,7 @@ class _FeedPhotoState extends State<FeedPhoto> {
   Widget build(BuildContext context) {
     if (_falhou) return const SizedBox.shrink();
     final p = context.palette;
-    final bytes = widget.bytes;
+    final bytes = _bytes;
 
     return AspectRatio(
       aspectRatio: 4 / 3,

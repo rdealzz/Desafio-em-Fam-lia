@@ -38,20 +38,49 @@ class PhotoCleanupService {
   }) async {
     if (_limpando) return;
 
-    final alvos = <DocumentReference<Map<String, dynamic>>>[];
+    // Dois lotes, não um: a foto é gravada em duas coleções pela mesma
+    // transação, mas apagada por caminhos que podem se desencontrar (um lote
+    // que falha pela metade, uma limpeza anterior que só pegou um lado). Como
+    // lote do Firestore é tudo-ou-nada, juntá-los faria uma escrita já
+    // recusada derrubar a outra, que estava certa.
+    final dePosts = <DocumentReference<Map<String, dynamic>>>{};
+    final deLogs = <DocumentReference<Map<String, dynamic>>>{};
+
     for (final post in posts) {
-      if (post.photoData != null && PhotoProof.venceu(post.photoExpiresAt)) {
-        alvos.add(_refs.feedPosts.doc(post.id));
+      if (post.photoData == null || !PhotoProof.venceu(post.photoExpiresAt)) {
+        continue;
+      }
+      dePosts.add(_refs.feedPosts.doc(post.id));
+      // O registro no histórico guarda a mesma foto, gravada na mesma
+      // transação e portanto com o mesmo vencimento. Sem apagá-lo aqui, a
+      // cópia pesada sobreviveria no banco e o combinado de um dia valeria só
+      // para o mural — e o histórico é visitado bem menos que o mural.
+      final logId = post.activityLogId;
+      if (logId != null && logId.isNotEmpty) {
+        deLogs.add(_refs.activityLogs.doc(logId));
       }
     }
+
     for (final log in logs) {
       if (log.photoData != null && PhotoProof.venceu(log.photoExpiresAt)) {
-        alvos.add(_refs.activityLogs.doc(log.id));
+        deLogs.add(_refs.activityLogs.doc(log.id));
       }
     }
-    if (alvos.isEmpty) return;
+
+    if (dePosts.isEmpty && deLogs.isEmpty) return;
 
     _limpando = true;
+    try {
+      await Future.wait([_apagar(dePosts), _apagar(deLogs)]);
+    } finally {
+      _limpando = false;
+    }
+  }
+
+  Future<void> _apagar(
+    Set<DocumentReference<Map<String, dynamic>>> alvos,
+  ) async {
+    if (alvos.isEmpty) return;
     try {
       final batch = _refs.db.batch();
       for (final ref in alvos) {
@@ -62,8 +91,6 @@ class PhotoCleanupService {
       // Limpeza é oportunista: se falhar, a próxima abertura tenta de novo.
       // Enquanto isso a foto já não aparece — quem esconde é FeedPhoto.para,
       // que olha o vencimento antes dos bytes.
-    } finally {
-      _limpando = false;
     }
   }
 }

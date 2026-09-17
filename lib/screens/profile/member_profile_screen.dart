@@ -9,6 +9,7 @@ import '../../core/utils/formatters.dart';
 import '../../models/activity_log.dart';
 import '../../models/app_user.dart';
 import '../../services/activity_service.dart';
+import '../../services/photo_cleanup_service.dart';
 import '../../state/session_controller.dart';
 import '../../widgets/avatar_bubble.dart';
 import '../../widgets/ui/activity_icons.dart';
@@ -66,6 +67,15 @@ class MemberProfileScreen extends StatelessWidget {
         builder: (context, snap) {
           final logs = snap.data ?? const <ActivityLog>[];
           final carregando = !snap.hasData && !snap.hasError;
+
+          // Mesma limpeza do mural, por outro caminho: alcança o registro cujo
+          // post já saiu da primeira página do feed.
+          if (logs.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!context.mounted) return;
+              context.read<PhotoCleanupService>().limpar(logs: logs);
+            });
+          }
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(

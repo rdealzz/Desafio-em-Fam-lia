@@ -101,6 +101,10 @@ class FeedScreen extends StatelessWidget {
                   // estão nela somem do servidor agora. Fora do build para não
                   // escrever no meio da construção do quadro.
                   WidgetsBinding.instance.addPostFrameCallback((_) {
+                    // O guarda importa: sair do mural no quadro em que o
+                    // snapshot chega deixaria este context desativado, e a
+                    // busca pelo provider lançaria.
+                    if (!context.mounted) return;
                     context.read<PhotoCleanupService>().limpar(posts: posts);
                   });
                   if (posts.isEmpty) {
