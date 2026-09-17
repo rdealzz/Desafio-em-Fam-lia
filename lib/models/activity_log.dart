@@ -17,6 +17,8 @@ class ActivityLog {
     this.basePoints = 0,
     this.stepsPoints = 0,
     this.photoUrl,
+    this.photoData,
+    this.photoExpiresAt,
     this.note = '',
     this.weekId = '',
     this.source = 'manual',
@@ -41,7 +43,16 @@ class ActivityLog {
   final int stepsPoints;
 
   /// Foto comprovante no Firebase Storage.
+  /// Endereço da foto no Firebase Storage. Só existe em registro antigo:
+  /// sem Storage no plano gratuito, a foto agora vai em [photoData].
   final String? photoUrl;
+
+  /// A foto em base64, dentro do próprio documento (ver [PhotoProof]).
+  /// Fica vazia depois de [photoExpiresAt] — a foto vale um dia.
+  final String? photoData;
+
+  /// Quando a foto deixa de ser exibida e pode ser apagada.
+  final DateTime? photoExpiresAt;
   final String note;
   final String weekId;
 
@@ -87,6 +98,8 @@ class ActivityLog {
       basePoints: FirestoreUtils.toInt(map['basePoints']),
       stepsPoints: FirestoreUtils.toInt(map['stepsPoints']),
       photoUrl: map['photoUrl'] as String?,
+      photoData: map['photoData'] as String?,
+      photoExpiresAt: FirestoreUtils.toDateTime(map['photoExpiresAt']),
       note: FirestoreUtils.toStringValue(map['note']),
       weekId: FirestoreUtils.toStringValue(map['weekId']),
       source: FirestoreUtils.toStringValue(map['source'], fallback: 'manual'),
@@ -106,6 +119,8 @@ class ActivityLog {
         'basePoints': basePoints,
         'stepsPoints': stepsPoints,
         'photoUrl': photoUrl,
+        'photoData': photoData,
+        'photoExpiresAt': photoExpiresAt,
         'note': note,
         'weekId': weekId,
         'source': source,

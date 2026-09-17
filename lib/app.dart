@@ -17,8 +17,10 @@ import 'services/feed_service.dart';
 import 'services/firestore_refs.dart';
 import 'services/health_service.dart';
 import 'services/pending_activity_store.dart';
+import 'services/photo_cleanup_service.dart';
 import 'services/profile_service.dart';
 import 'services/storage_service.dart';
+import 'state/avisos_controller.dart';
 import 'state/session_controller.dart';
 
 /// Raiz do app. Monta a injeção de dependências uma única vez.
@@ -50,8 +52,13 @@ class DesafioEmFamiliaApp extends StatelessWidget {
         ProxyProvider<FirestoreRefs, FeedService>(
           update: (_, refs, __) => FeedService(refs),
         ),
-        ProxyProvider2<FirestoreRefs, StorageService, ActivityService>(
-          update: (_, refs, storage, __) => ActivityService(refs, storage),
+        // Sem StorageService: a foto comprovante vai dentro do documento do
+        // Firestore (ver PhotoProof). O Storage ficou só para o avatar.
+        ProxyProvider<FirestoreRefs, ActivityService>(
+          update: (_, refs, __) => ActivityService(refs),
+        ),
+        ProxyProvider<FirestoreRefs, PhotoCleanupService>(
+          update: (_, refs, __) => PhotoCleanupService(refs),
         ),
         Provider<PendingActivityStore>(create: (_) => PendingActivityStore()),
         ChangeNotifierProxyProvider2<ActivityService, PendingActivityStore,
@@ -68,6 +75,11 @@ class DesafioEmFamiliaApp extends StatelessWidget {
         ProxyProvider2<FirestoreRefs, FamilyService, AuthService>(
           update: (_, refs, familyService, __) =>
               AuthService(FirebaseAuth.instance, refs, familyService),
+        ),
+        ChangeNotifierProxyProvider<FeedService, AvisosController>(
+          create: (context) =>
+              AvisosController(context.read<FeedService>())..carregar(),
+          update: (_, __, previous) => previous!,
         ),
         ChangeNotifierProxyProvider2<AuthService, FamilyService,
             SessionController>(
@@ -101,6 +113,18 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<SessionController>();
+
+    // Aqui porque é o único lugar que reconstrói a cada mudança de sessão —
+    // login, troca de família, logout. Fora do build para não tocar em outro
+    // provider no meio da construção do quadro.
+    final familyId = session.family?.id;
+    final meuId = session.user?.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      context
+          .read<AvisosController>()
+          .observar(familyId: familyId, meuId: meuId);
+    });
 
     switch (session.status) {
       case SessionStatus.loading:

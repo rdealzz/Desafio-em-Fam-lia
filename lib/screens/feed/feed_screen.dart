@@ -7,6 +7,7 @@ import '../../core/theme/tokens.dart';
 import '../../core/utils/firestore_erros.dart';
 import '../../models/feed_post.dart';
 import '../../services/feed_service.dart';
+import '../../services/photo_cleanup_service.dart';
 import '../../state/session_controller.dart';
 import '../../widgets/donate_points_sheet.dart';
 import '../../widgets/feed_post_card.dart';
@@ -96,6 +97,12 @@ class FeedScreen extends StatelessWidget {
                     return const Center(child: CircularProgressIndicator());
                   }
                   final posts = snap.data!;
+                  // Aproveita que a lista já chegou: as fotos vencidas que
+                  // estão nela somem do servidor agora. Fora do build para não
+                  // escrever no meio da construção do quadro.
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    context.read<PhotoCleanupService>().limpar(posts: posts);
+                  });
                   if (posts.isEmpty) {
                     return const _Vazio(
                       icon: Icons.inbox_outlined,

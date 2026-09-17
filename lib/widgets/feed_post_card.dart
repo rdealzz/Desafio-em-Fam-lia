@@ -49,7 +49,7 @@ class FeedPostCard extends StatelessWidget {
               ),
       ),
     );
-    final temFoto = post.photoUrl != null && post.photoUrl!.isNotEmpty;
+    final foto = FeedPhoto.para(post);
 
     return RepaintBoundary(
       child: Container(
@@ -167,9 +167,9 @@ class FeedPostCard extends StatelessWidget {
                   ],
                 ),
               ),
-            if (temFoto) ...[
+            if (foto != null) ...[
               const SizedBox(height: Space.md),
-              FeedPhoto(url: post.photoUrl!),
+              foto,
             ],
             Padding(
               padding: const EdgeInsets.fromLTRB(

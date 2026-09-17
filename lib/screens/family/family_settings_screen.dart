@@ -90,16 +90,17 @@ class FamilySettingsScreen extends StatelessWidget {
           InsetGroup(
             header: 'Foto comprovante',
             footer: family.requirePhotoProof
-                ? 'Com isso ligado, o servidor recusa registro sem foto — não '
-                    'é só a tela pedindo.'
-                : 'Ligue quando o Storage estiver criado no Firebase. Sem '
-                    'Storage, ligar isso impede todo mundo de registrar.',
+                ? 'O servidor recusa registro sem foto — não é só a tela '
+                    'pedindo. A foto aparece no mural por um dia e depois é '
+                    'apagada sozinha.'
+                : 'Sem isso, a foto continua podendo ser anexada, só deixa de '
+                    'ser obrigatória.',
             children: [
               InsetRow(
                 icon: Icons.photo_camera_outlined,
                 title: 'Exigir foto em todo registro',
                 subtitle: family.requirePhotoProof
-                    ? 'ligado'
+                    ? 'ligado — some do mural depois de 1 dia'
                     : 'desligado — a foto fica opcional',
                 showChevron: false,
                 trailing: Switch.adaptive(

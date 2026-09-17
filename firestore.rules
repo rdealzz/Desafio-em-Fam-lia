@@ -45,9 +45,32 @@ service cloud.firestore {
                request.time - duration.value(48, 'h');
     }
 
+    // A foto comprovante vai DENTRO do documento, em base64: projeto sem o
+    // plano Blaze não tem Storage. `photoUrl` ainda conta porque registro
+    // antigo, de quando havia Storage, guardou endereço.
     function hasPhotoProof() {
-      return request.resource.data.photoUrl is string &&
-             request.resource.data.photoUrl.size() > 0;
+      return (request.resource.data.get('photoData', '') is string &&
+              request.resource.data.get('photoData', '').size() > 0) ||
+             (request.resource.data.get('photoUrl', '') is string &&
+              request.resource.data.get('photoUrl', '').size() > 0);
+    }
+
+    // Teto do texto da foto. O documento do Firestore para em 1 MiB, e o app
+    // já pede a foto pequena à câmera; isto é a rede de segurança do servidor
+    // contra um cliente adulterado entupir a coleção.
+    function photoWithinLimit() {
+      return request.resource.data.get('photoData', '') == null ||
+             request.resource.data.get('photoData', '').size() <= 200000;
+    }
+
+    // A foto vale um dia e depois é apagada por quem abrir o app (não há
+    // Function para isso). Só os dois campos da foto vão a zero, e só depois
+    // da hora marcada — ninguém apaga a prova alheia antes do prazo.
+    function clearingExpiredPhoto() {
+      return changedKeys().hasOnly(['photoData', 'photoExpiresAt']) &&
+             request.resource.data.get('photoData', null) == null &&
+             resource.data.get('photoExpiresAt', null) is timestamp &&
+             request.time > resource.data.photoExpiresAt;
     }
 
     function changedKeys() {
@@ -111,14 +134,18 @@ service cloud.firestore {
         // sem ela o registro é recusado pelo servidor.
         (hasPhotoProof() ||
          !familyRequiresPhoto(request.resource.data.familyId)) &&
+        photoWithinLimit() &&
         // A hora declarada tem de bater com o relógio do servidor.
         plausibleTimestamp() &&
         // Quando chegou, na hora do servidor: é o contraponto ao que o
         // aparelho declara, e o que revela um registro atrasado.
         request.resource.data.syncedAt == request.time;
 
-      // Histórico é imutável: correções entram como novo registro.
-      allow update, delete: if false;
+      // Histórico é imutável: correções entram como novo registro. A única
+      // exceção é apagar a foto vencida — pontos, hora e tipo não se mexem.
+      allow update: if sameFamily(resource.data.familyId) &&
+        clearingExpiredPhoto();
+      allow delete: if false;
     }
 
     // --- feed_posts -------------------------------------------------------
@@ -128,11 +155,15 @@ service cloud.firestore {
       allow create: if isSignedIn() &&
         sameFamily(request.resource.data.familyId) &&
         (request.resource.data.authorId == request.auth.uid ||
-         request.resource.data.authorId == 'system');
+         request.resource.data.authorId == 'system') &&
+        photoWithinLimit();
 
-      // Qualquer integrante reage; só o autor apaga o próprio post.
-      allow update: if sameFamily(resource.data.familyId) &&
-        changedKeys().hasOnly(['reactions']);
+      // Qualquer integrante reage, e qualquer um apaga foto já vencida; só o
+      // autor apaga o próprio post.
+      allow update: if sameFamily(resource.data.familyId) && (
+        changedKeys().hasOnly(['reactions']) ||
+        clearingExpiredPhoto()
+      );
 
       allow delete: if isSignedIn() &&
         resource.data.authorId == request.auth.uid;

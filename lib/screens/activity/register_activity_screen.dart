@@ -9,6 +9,7 @@ import '../../core/utils/formatters.dart';
 import '../../models/activity_type.dart';
 import '../../models/app_user.dart';
 import '../../services/activity_service.dart';
+import '../../services/photo_proof.dart';
 import '../../services/activity_sync_service.dart';
 import '../../services/app_exception.dart';
 import '../../services/health_service.dart';
@@ -243,10 +244,13 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
     );
     if (fonte == null) return;
 
+    // Pequena de propósito: a foto vai dentro do documento do Firestore, que
+    // para em 1 MiB. Nesta faixa ela fica em algumas dezenas de KB, e 400 px
+    // mostram de sobra que a pessoa estava lá — é prova, não álbum.
     final escolhida = await _picker.pickImage(
       source: fonte,
-      imageQuality: 70,
-      maxWidth: 1440,
+      imageQuality: PhotoProof.qualidade,
+      maxWidth: PhotoProof.larguraMaxima.toDouble(),
     );
     if (escolhida == null) return;
 

@@ -6,6 +6,8 @@ import '../../core/theme/palette.dart';
 import '../../core/theme/theme_controller.dart';
 import '../../core/theme/tokens.dart';
 import '../../models/feed_post.dart';
+import '../../services/avisos/avisos.dart';
+import '../../state/avisos_controller.dart';
 import '../../state/session_controller.dart';
 import '../../widgets/donate_points_sheet.dart';
 import '../../widgets/members_group.dart';
@@ -241,6 +243,7 @@ class _GrupoConta extends StatelessWidget {
           subtitle: 'foto, nome que aparece e cor',
           onTap: () => ProfileEditScreen.open(context),
         ),
+        const _LinhaAvisos(),
         InsetRow(
           icon: Icons.tune_rounded,
           title: 'Ajustes da família',
@@ -268,6 +271,75 @@ class _GrupoConta extends StatelessWidget {
           onTap: session.signOut,
         ),
       ],
+    );
+  }
+}
+
+/// Liga/desliga os avisos deste aparelho.
+///
+/// Fica no menu de cada pessoa, e não em Ajustes da família, porque a
+/// permissão é do navegador daquele aparelho: ligar no celular não liga no
+/// computador, e cada um decide para si.
+class _LinhaAvisos extends StatelessWidget {
+  const _LinhaAvisos();
+
+  @override
+  Widget build(BuildContext context) {
+    final avisos = context.watch<AvisosController>();
+    final p = context.palette;
+
+    // Navegador sem suporte (ou app nativo): nem mostra a opção, em vez de
+    // oferecer uma chave que não faz nada.
+    if (!avisos.suportado) return const SizedBox.shrink();
+
+    if (avisos.bloqueadoPeloNavegador) {
+      return InsetRow(
+        icon: Icons.notifications_off_outlined,
+        title: 'Avisos bloqueados',
+        subtitle: 'libere no cadeado da barra de endereço',
+        showChevron: false,
+      );
+    }
+
+    return InsetRow(
+      icon: avisos.ligados
+          ? Icons.notifications_active_outlined
+          : Icons.notifications_none_rounded,
+      title: 'Avisos neste aparelho',
+      subtitle: avisos.ligados
+          ? 'quando alguém treinar, com o app aberto'
+          : 'saber quando alguém da família treinar',
+      showChevron: false,
+      trailing: Switch.adaptive(
+        value: avisos.ligados,
+        onChanged: (quer) async {
+          final messenger = ScaffoldMessenger.of(context);
+          if (!quer) {
+            await avisos.desligar();
+            return;
+          }
+          final ok = await avisos.ligar();
+          if (!ok) {
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'O navegador não liberou os avisos. Toque no cadeado da '
+                  'barra de endereço para permitir.',
+                ),
+              ),
+            );
+          } else {
+            HapticFeedback.mediumImpact();
+            mostrarAviso(
+              titulo: 'Avisos ligados',
+              corpo: 'É assim que vou te avisar quando alguém treinar.',
+              tag: 'teste',
+              icone: 'icons/Icon-192.png',
+            );
+          }
+        },
+        activeTrackColor: p.accent,
+      ),
     );
   }
 }

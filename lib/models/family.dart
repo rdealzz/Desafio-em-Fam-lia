@@ -33,15 +33,11 @@ class Family {
   /// Pontos já depositados no cofre nesta semana.
   final int vaultPoints;
 
-  /// Exige foto comprovante em todo registro de atividade.
+  /// Exige foto comprovante em todo registro de atividade. Ligado por padrão:
+  /// a foto é o que dá graça ao mural e tira a discussão sobre quem fez o quê.
   ///
-  /// A foto é o que dá graça ao mural e tira a discussão sobre quem fez o quê,
-  /// mas depende do Firebase Storage, que em projeto novo só existe no plano
-  /// Blaze. Por isso é ajuste, e nasce desligado em família nova
-  /// ([FamilyService.createFamily]) — liga-se em Ajustes da família.
-  ///
-  /// O padrão aqui no modelo continua `true`: ele vale para documento antigo,
-  /// gravado antes deste campo existir, quando a foto já era obrigatória.
+  /// Quem não quiser desliga em Ajustes da família — a exigência é checada no
+  /// servidor, pelas regras, não só na tela.
   final bool requirePhotoProof;
 
   final String weekId;

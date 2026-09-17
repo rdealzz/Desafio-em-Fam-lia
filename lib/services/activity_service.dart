@@ -12,8 +12,8 @@ import '../models/feed_post.dart';
 import '../models/reward.dart';
 import 'app_exception.dart';
 import 'firestore_refs.dart';
+import 'photo_proof.dart';
 import 'points_calculator.dart';
-import 'storage_service.dart';
 
 /// O que aconteceu depois de registrar uma atividade — a tela usa para o
 /// feedback ("+150 pts", "prêmio desbloqueado!").
@@ -43,10 +43,9 @@ class ActivityRegistrationResult {
 /// da outra. A transação lê família + usuário, recalcula e grava de uma vez;
 /// se alguém escreveu no meio, o Firestore repete a operação sozinho.
 class ActivityService {
-  ActivityService(this._refs, this._storage);
+  ActivityService(this._refs);
 
   final FirestoreRefs _refs;
-  final StorageService _storage;
 
   /// Registra uma atividade e deposita os pontos no cofre da família.
   ///
@@ -81,18 +80,14 @@ class ActivityService {
       );
     }
 
-    String? photoUrl;
-    if (photoBytes != null) {
-      photoUrl = await _storage
-          .uploadActivityProof(
-            familyId: user.familyId,
-            userId: user.id,
-            bytes: photoBytes,
-          )
-          // Sem rede o upload fica pendurado tentando de novo. O prazo devolve
-          // o controle para quem chamou, que decide entre avisar ou enfileirar.
-          .timeout(timeout);
-    }
+    // A foto viaja dentro do documento, em base64, com um dia de validade —
+    // ver PhotoProof. Não há upload separado, então também não há mais um
+    // segundo ponto de falha entre gravar a foto e gravar o registro: ou a
+    // transação inteira passa, ou nada foi escrito.
+    final String? photoData =
+        photoBytes == null ? null : PhotoProof.codificar(photoBytes);
+    final DateTime? photoExpiresAt =
+        photoData == null ? null : PhotoProof.vencimento(DateTime.now());
 
     // Quando a atividade ACONTECEU. Difere de agora num registro que passou
     // pela fila offline — e é essa hora que vale para o dia, a sequência e o
@@ -153,7 +148,8 @@ class ActivityService {
 
       // Conferido aqui dentro, contra o documento da família, e não só na
       // interface: a tela pode estar com uma cópia velha da configuração.
-      if (family.requirePhotoProof && (photoUrl == null || photoUrl.isEmpty)) {
+      if (family.requirePhotoProof &&
+          (photoData == null || photoData.isEmpty)) {
         throw const AppException(
           'Esta família exige foto comprovante. Anexe a foto do momento.',
         );
@@ -209,7 +205,8 @@ class ActivityService {
         points: breakdown.total,
         basePoints: breakdown.basePoints,
         stepsPoints: breakdown.stepsPoints,
-        photoUrl: photoUrl,
+        photoData: photoData,
+        photoExpiresAt: photoExpiresAt,
         note: note,
         weekId: logWeekId,
         source: source,
@@ -257,7 +254,8 @@ class ActivityService {
           message: note.isNotEmpty
               ? note
               : '${type.label} — $durationMinutes min',
-          photoUrl: photoUrl,
+          photoData: photoData,
+          photoExpiresAt: photoExpiresAt,
           points: breakdown.total,
           durationMinutes: durationMinutes,
           activityLogId: logRef.id,

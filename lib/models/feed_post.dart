@@ -61,6 +61,8 @@ class FeedPost {
     this.authorPhotoUrl,
     this.message = '',
     this.photoUrl,
+    this.photoData,
+    this.photoExpiresAt,
     this.points = 0,
     this.durationMinutes = 0,
     this.activityLogId,
@@ -80,7 +82,16 @@ class FeedPost {
   final String message;
 
   /// Foto do momento (comprovante da atividade ou do mico).
+  /// Endereço da foto no Firebase Storage. Só existe em registro antigo:
+  /// sem Storage no plano gratuito, a foto agora vai em [photoData].
   final String? photoUrl;
+
+  /// A foto em base64, dentro do próprio documento (ver [PhotoProof]).
+  /// Fica vazia depois de [photoExpiresAt] — a foto vale um dia.
+  final String? photoData;
+
+  /// Quando a foto deixa de ser exibida e pode ser apagada.
+  final DateTime? photoExpiresAt;
 
   final int points;
   final int durationMinutes;
@@ -117,6 +128,8 @@ class FeedPost {
       type: FeedPostType.fromId(map['type'] as String?),
       message: FirestoreUtils.toStringValue(map['message']),
       photoUrl: map['photoUrl'] as String?,
+      photoData: map['photoData'] as String?,
+      photoExpiresAt: FirestoreUtils.toDateTime(map['photoExpiresAt']),
       points: FirestoreUtils.toInt(map['points']),
       durationMinutes: FirestoreUtils.toInt(map['durationMinutes']),
       activityLogId: map['activityLogId'] as String?,
@@ -137,6 +150,8 @@ class FeedPost {
         'type': type.id,
         'message': message,
         'photoUrl': photoUrl,
+        'photoData': photoData,
+        'photoExpiresAt': photoExpiresAt,
         'points': points,
         'durationMinutes': durationMinutes,
         'activityLogId': activityLogId,
