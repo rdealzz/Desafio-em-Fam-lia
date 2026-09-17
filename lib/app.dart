@@ -5,10 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/theme/palette.dart';
+import 'core/theme/tokens.dart';
+import 'core/utils/firestore_erros.dart';
 import 'core/theme/theme_controller.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/join_family_screen.dart';
 import 'screens/shell/home_shell.dart';
+import 'widgets/ui/pressable.dart';
 import 'services/activity_service.dart';
 import 'services/activity_sync_service.dart';
 import 'services/auth_service.dart';
@@ -135,6 +139,8 @@ class AuthGate extends StatelessWidget {
         return const JoinFamilyScreen();
       case SessionStatus.ready:
         return const HomeShell();
+      case SessionStatus.falhou:
+        return const _FalhaAoCarregar();
     }
   }
 }
@@ -146,6 +152,62 @@ class _SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       body: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+/// Logado, mas os dados não vieram.
+///
+/// Antes isto era a bolinha girando para sempre — o app parecia travado e não
+/// dizia nada. A causa quase sempre é regra do Firestore desatualizada ou rede
+/// fora, e as duas têm saída: tentar de novo, ou sair e entrar.
+class _FalhaAoCarregar extends StatelessWidget {
+  const _FalhaAoCarregar();
+
+  @override
+  Widget build(BuildContext context) {
+    final session = context.read<SessionController>();
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final erro = FirestoreErros.traduzir(session.erro);
+
+    return Scaffold(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.all(Space.xxl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.cloud_off_rounded, size: 32, color: p.textMuted),
+                const SizedBox(height: Space.lg),
+                Text(erro.titulo, style: t.titleMedium),
+                const SizedBox(height: Space.xs),
+                Text(
+                  erro.texto,
+                  textAlign: TextAlign.center,
+                  style: t.bodyMedium,
+                ),
+                const SizedBox(height: Space.xl),
+                Pressable(
+                  onPressed: session.recarregar,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Space.xxl,
+                    vertical: 15,
+                  ),
+                  child: const Text('Tentar de novo'),
+                ),
+                const SizedBox(height: Space.md),
+                TextButton(
+                  onPressed: session.signOut,
+                  child: const Text('Sair da conta'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

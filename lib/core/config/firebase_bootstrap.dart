@@ -113,6 +113,8 @@ class FirebaseBootstrap {
         await _connectEmulators().timeout(tempoLimite);
       }
 
+      await _manterSessao();
+
       return const FirebaseStartup(FirebaseStartupStatus.ready);
     } on TimeoutException {
       return FirebaseStartup(
@@ -131,6 +133,28 @@ class FirebaseBootstrap {
       );
     } catch (e) {
       return FirebaseStartup(FirebaseStartupStatus.failed, detail: '$e');
+    }
+  }
+
+  /// Pede ao Firebase para guardar a sessão no aparelho.
+  ///
+  /// No navegador o padrão já é este, mas "já é" não basta: quando o
+  /// armazenamento local está indisponível — navegador embutido de aplicativo
+  /// de mensagem, aba anônima, bloqueio de dados de site —, o SDK cai sozinho
+  /// para sessão só na memória, e aí toda abertura pede login de novo. Pedindo
+  /// explicitamente, o caso sem suporte vira um erro que dá para tratar, em
+  /// vez de um silêncio que vira atrito diário.
+  ///
+  /// Fora da web não faz nada: no celular nativo a sessão já fica em disco, e
+  /// `setPersistence` nem é suportado lá.
+  static Future<void> _manterSessao() async {
+    if (!kIsWeb) return;
+    try {
+      await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+    } catch (_) {
+      // Sem armazenamento disponível a sessão vale só enquanto a aba estiver
+      // aberta. Não é motivo para impedir o uso — é motivo para instalar o app
+      // na tela de início, que é o que a tela de entrada sugere.
     }
   }
 

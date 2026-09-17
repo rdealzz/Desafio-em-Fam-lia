@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/theme/palette.dart';
 import '../../core/theme/tokens.dart';
@@ -48,6 +49,41 @@ class _LoginScreenState extends State<LoginScreen> {
     'filho': 'Filho(a)',
     'membro': 'Outro',
   };
+
+  /// Último apelido que entrou neste aparelho.
+  ///
+  /// A sessão deveria bastar, mas quando o navegador apaga os dados do site
+  /// — aba anônima, navegador embutido de aplicativo de mensagem, iPhone
+  /// limpando site pouco usado — o login volta. Aí pelo menos só falta a
+  /// senha.
+  static const String _chaveUltimoUsuario = 'ultimo_usuario_v1';
+
+  @override
+  void initState() {
+    super.initState();
+    _lembrarUsuario();
+  }
+
+  Future<void> _lembrarUsuario() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final ultimo = prefs.getString(_chaveUltimoUsuario) ?? '';
+      if (ultimo.isNotEmpty && mounted && _usuario.text.isEmpty) {
+        _usuario.text = ultimo;
+      }
+    } catch (_) {
+      // Sem armazenamento local o campo só começa vazio.
+    }
+  }
+
+  Future<void> _guardarUsuario(String usuario) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_chaveUltimoUsuario, usuario.trim());
+    } catch (_) {
+      // Idem: não impede entrar.
+    }
+  }
 
   @override
   void dispose() {
@@ -411,6 +447,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         await auth.signIn(username: _usuario.text, password: _senha.text);
       }
+      await _guardarUsuario(_usuario.text);
       // O AuthGate troca de tela sozinho quando a sessão muda.
     } on AppException catch (e) {
       setState(() => _erro = e.message);

@@ -20,6 +20,11 @@ enum SessionStatus {
 
   /// Tudo carregado: usuário + família.
   ready,
+
+  /// Logado, mas não deu para carregar os dados (regras, rede). Estado
+  /// próprio porque o sintoma antes era ficar rodando a bolinha para sempre,
+  /// que não diz nada a quem está olhando.
+  falhou,
 }
 
 /// Estado global da sessão: quem está logado, sua família e os 4 integrantes.
@@ -53,6 +58,7 @@ class SessionController extends ChangeNotifier {
   AppUser? _user;
   Family? _family;
   List<AppUser> _members = const [];
+  Object? _erro;
 
   SessionStatus get status => _status;
   AppUser? get user => _user;
@@ -60,6 +66,9 @@ class SessionController extends ChangeNotifier {
   List<AppUser> get members => _members;
 
   bool get isReady => _status == SessionStatus.ready;
+
+  /// O erro que derrubou o carregamento, para a tela explicar o que houve.
+  Object? get erro => _erro;
 
   /// Os outros integrantes — usado na Carta Salva-Mãe/Pai.
   List<AppUser> get otherMembers =>
@@ -76,9 +85,15 @@ class SessionController extends ChangeNotifier {
       return;
     }
 
+    _erro = null;
     _setStatus(SessionStatus.loading);
-    _userSubscription =
-        _familyService.watchUser(firebaseUser.uid).listen(_onUserChanged);
+    // onError em todas as assinaturas: sem ele, uma leitura recusada pelas
+    // regras encerrava o stream calado e a tela ficava na bolinha para
+    // sempre — o app parecia travado sem dizer por quê.
+    _userSubscription = _familyService.watchUser(firebaseUser.uid).listen(
+          _onUserChanged,
+          onError: _onErro,
+        );
   }
 
   void _onUserChanged(AppUser? user) {
@@ -106,22 +121,39 @@ class SessionController extends ChangeNotifier {
       _familySubscription?.cancel();
       _membersSubscription?.cancel();
 
-      _familySubscription =
-          _familyService.watchFamily(user.familyId).listen((family) {
-        _family = family;
-        _setStatus(
-          family == null ? SessionStatus.needsFamily : SessionStatus.ready,
-        );
-      });
+      _familySubscription = _familyService.watchFamily(user.familyId).listen(
+        (family) {
+          _family = family;
+          _setStatus(
+            family == null ? SessionStatus.needsFamily : SessionStatus.ready,
+          );
+        },
+        onError: _onErro,
+      );
 
-      _membersSubscription =
-          _familyService.watchMembers(user.familyId).listen((members) {
-        _members = members;
-        notifyListeners();
-      });
+      _membersSubscription = _familyService.watchMembers(user.familyId).listen(
+        (members) {
+          _members = members;
+          notifyListeners();
+        },
+        // A lista de integrantes falhar não impede usar o app: o cofre e o
+        // registro continuam de pé, então isto não vira tela de erro.
+        onError: (_) {},
+      );
     } else {
       notifyListeners();
     }
+  }
+
+  void _onErro(Object erro) {
+    _erro = erro;
+    _setStatus(SessionStatus.falhou);
+  }
+
+  /// Tenta de novo depois de uma falha, sem precisar sair da conta.
+  void recarregar() {
+    _cancelDataSubscriptions();
+    _onAuthChanged(_authService.currentUser);
   }
 
   void _setStatus(SessionStatus status) {
