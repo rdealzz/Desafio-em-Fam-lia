@@ -92,6 +92,15 @@ class _PressableState extends State<Pressable>
       padding: widget.padding,
       decoration: BoxDecoration(
         color: face,
+        // O botão principal ganha um meio-tom do gradiente do cofre: o
+        // bastante para ter volume, pouco para não parecer outro botão.
+        gradient: widget.tone == PressableTone.primary
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [face, Color.lerp(face, p.accentAlt, 0.5)!],
+              )
+            : null,
         borderRadius: BorderRadius.circular(widget.radius),
         border: widget.tone == PressableTone.ghost
             ? Border.all(color: p.border)

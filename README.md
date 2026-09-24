@@ -61,6 +61,7 @@ desbloqueia sozinho e vira um aviso no mural.
 | **1. A Casa** (dashboard) | `lib/screens/home/home_screen.dart` | Barra de progresso do cofre, avatares dos 4 com status do dia, botão grande "Registrar Atividade", prêmios e cartas |
 | **2. Registrar Atividade** | `lib/screens/activity/register_activity_screen.dart` | Ícones grandes por modalidade, duração, passos, foto comprovante, preview de pontos ao vivo |
 | **3. Mural do Deboche & Apoio** | `lib/screens/feed/feed_screen.dart` | Feed privado dos 4, fotos, tempo e pontos, reações por emoji, cartas publicadas |
+| **Placar da semana** | `lib/screens/scoreboard/scoreboard_screen.dart` | Pódio, classificação com a fatia de cada um no cofre e quem está na lanterna. No domingo vira o **fechamento**, com atalho para lançar a Punição Leve |
 | **Meu Progresso** | `lib/screens/profile/member_profile_screen.dart` | Histórico individual, strip dos últimos 7 dias, sequência e fatia do cofre. Abre ao tocar num avatar do dashboard |
 
 ---
@@ -312,8 +313,8 @@ O MVP está fechado e funcional. O que faz sentido vir depois, em ordem:
 - [ ] **Recarga automática das cartas** — hoje `refillSaveCards` é manual;
       vira uma Cloud Function agendada na segunda-feira.
 - [ ] **Notificações push** — "faltam 500 pts para a Noite da Pizza 🍕".
-- [ ] **Fechamento de domingo** — tela com o ranking da semana e quem paga o
-      mico.
+- [x] **Fechamento de domingo** — tela com o ranking da semana e quem paga o
+      mico (`ScoreboardScreen`).
 - [ ] **Mover a doação para Cloud Function** — hoje um integrante escreve no
       perfil de outro (com campos limitados pelas regras). Numa escala maior,
       isso deve virar servidor. Está marcado como `TODO` em `firestore.rules`.

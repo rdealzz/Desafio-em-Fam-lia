@@ -161,16 +161,7 @@ class ActivityService {
       final isNewWeek = family.weekId != weekId;
       final vaultBase = isNewWeek ? 0 : family.vaultPoints;
       final rewardsBase = isNewWeek
-          ? family.rewards
-              .map((r) => Reward(
-                    id: r.id,
-                    title: r.title,
-                    description: r.description,
-                    emoji: r.emoji,
-                    requiredPoints: r.requiredPoints,
-                    level: r.level,
-                  ))
-              .toList()
+          ? family.rewards.map((r) => r.relocked()).toList()
           : family.rewards;
 
       final userWeeklyBase =

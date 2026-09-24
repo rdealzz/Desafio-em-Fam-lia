@@ -30,6 +30,9 @@ class WeekUtils {
 
   static String currentWeekId() => weekId(DateTime.now());
 
+  /// Dias que ainda restam na semana, contando hoje: segunda = 7, domingo = 1.
+  static int daysLeftInWeek(DateTime date) => 8 - date.weekday;
+
   static bool isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 

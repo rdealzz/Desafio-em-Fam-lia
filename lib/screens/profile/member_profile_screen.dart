@@ -54,7 +54,7 @@ class MemberProfileScreen extends StatelessWidget {
     }
 
     final souEu = session.user?.id == member.id;
-    final cofre = session.family?.vaultPoints ?? 0;
+    final cofre = session.family?.vaultThisWeek ?? 0;
     final fatia =
         cofre == 0 ? 0 : ((member.pointsThisWeek / cofre) * 100).round();
 

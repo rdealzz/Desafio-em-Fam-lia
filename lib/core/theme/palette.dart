@@ -28,6 +28,8 @@ class Palette extends ThemeExtension<Palette> {
     required this.onAccent,
     required this.accentSoft,
     required this.accentShadow,
+    required this.accentAlt,
+    required this.gold,
     required this.energy,
     required this.energySoft,
     required this.success,
@@ -60,6 +62,21 @@ class Palette extends ThemeExtension<Palette> {
   /// Base sólida do botão 3D, um degrau mais fechada que o azul.
   final Color accentShadow;
 
+  /// Anil: a outra ponta do gradiente do azul. Só aparece em par com
+  /// [accent], nunca sozinho — é o que dá profundidade ao cofre e ao pódio
+  /// sem inventar uma terceira cor de ação.
+  final Color accentAlt;
+
+  /// Dourado do pódio. Decorativo e raro: primeiro lugar e prêmio liberado.
+  final Color gold;
+
+  /// Gradiente de destaque (cofre, pódio). Diagonal, para não parecer faixa.
+  LinearGradient get accentGradient => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [accent, accentAlt],
+      );
+
   /// Vermelho: sequência, energia, o que pede atenção.
   final Color energy;
   final Color energySoft;
@@ -85,6 +102,8 @@ class Palette extends ThemeExtension<Palette> {
     onAccent: Color(0xFFFFFFFF),
     accentSoft: Color(0x1F2E90FA),
     accentShadow: Color(0xFF1B6FC9),
+    accentAlt: Color(0xFF5B5BF0),
+    gold: Color(0xFFD99A00),
     energy: Color(0xFFE5484D),
     energySoft: Color(0x1FE5484D),
     success: Color(0xFF12A366),
@@ -110,6 +129,8 @@ class Palette extends ThemeExtension<Palette> {
     onAccent: Color(0xFF07101C),
     accentSoft: Color(0x2E5AAAFF),
     accentShadow: Color(0xFF2E7CC9),
+    accentAlt: Color(0xFF8C8DFF),
+    gold: Color(0xFFFFC94D),
     energy: Color(0xFFFF6369),
     energySoft: Color(0x2EFF6369),
     success: Color(0xFF3DD68C),
