@@ -16,6 +16,7 @@ import '../../widgets/feed_post_card.dart';
 import '../../widgets/publish_card_sheet.dart';
 import '../../widgets/ui/entrada.dart';
 import '../../widgets/ui/pressable.dart';
+import '../../widgets/ui/segmentado.dart';
 import '../../widgets/ui/primitives.dart';
 
 /// TELA 3 — Mural.
@@ -263,7 +264,8 @@ class _MuralListaState extends State<MuralLista> {
                 const SizedBox(height: Space.lg),
                 Entrada(
                   ordem: 1,
-                  child: _Filtros(
+                  child: Segmentado<FiltroMural>(
+                    opcoes: {for (final f in FiltroMural.values) f: f.rotulo},
                     atual: _filtro,
                     onMudar: (f) {
                       HapticFeedback.selectionClick();
@@ -416,84 +418,6 @@ class _NumeroDoDia extends StatelessWidget {
           style: t.bodySmall,
         ),
       ],
-    );
-  }
-}
-
-/// Controle segmentado do iOS: trilho cinza, a opção escolhida num bloco
-/// branco que desliza.
-class _Filtros extends StatelessWidget {
-  const _Filtros({required this.atual, required this.onMudar});
-
-  final FiltroMural atual;
-  final ValueChanged<FiltroMural> onMudar;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final t = Theme.of(context).textTheme;
-    const opcoes = FiltroMural.values;
-
-    return Container(
-      height: 34,
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        // Cinza sobre o cinza do fundo: o trilho do segmentado do iOS.
-        color: p.isDark ? p.surfaceRaised : const Color(0x1F767680),
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: LayoutBuilder(
-        builder: (context, box) {
-          final largura = box.maxWidth / opcoes.length;
-          return Stack(
-            children: [
-              AnimatedPositioned(
-                duration: Motion.base,
-                curve: Motion.enter,
-                left: largura * atual.index,
-                top: 0,
-                bottom: 0,
-                width: largura,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: p.isDark ? const Color(0xFF636366) : p.surface,
-                    borderRadius: BorderRadius.circular(7),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x1F000000),
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  for (final f in opcoes)
-                    Expanded(
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => onMudar(f),
-                        child: Center(
-                          child: AnimatedDefaultTextStyle(
-                            duration: Motion.fast,
-                            style: t.labelLarge!.copyWith(
-                              fontSize: 13.5,
-                              color:
-                                  f == atual ? p.textPrimary : p.textSecondary,
-                            ),
-                            child: Text(f.rotulo),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
     );
   }
 }

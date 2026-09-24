@@ -62,7 +62,7 @@ desbloqueia sozinho e vira um aviso no mural.
 | **2. Registrar Atividade** | `lib/screens/activity/register_activity_screen.dart` | Ícones grandes por modalidade, duração, passos, foto comprovante, preview de pontos ao vivo |
 | **3. Mural do Deboche & Apoio** | `lib/screens/feed/feed_screen.dart` | Feed privado dos 4, fotos, tempo e pontos, reações por emoji, cartas publicadas |
 | **Placar da semana** | `lib/screens/scoreboard/scoreboard_screen.dart` | Pódio, classificação com a fatia de cada um no cofre e quem está na lanterna. No domingo vira o **fechamento**, com atalho para lançar a Punição Leve |
-| **Meu Progresso** | `lib/screens/profile/member_profile_screen.dart` | Histórico individual, strip dos últimos 7 dias, sequência e fatia do cofre. Abre ao tocar num avatar do dashboard |
+| **Meu Perfil** | `lib/screens/profile/member_profile_screen.dart` | Cabeçalho com foto e papel na família, números da semana (pontos, sequência com recorde, fatia do cofre, total), gráfico dos últimos 7 dias, treinos por modalidade e histórico dia a dia. Abre ao tocar num avatar |
 
 ---
 

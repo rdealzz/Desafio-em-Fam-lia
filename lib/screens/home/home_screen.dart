@@ -375,10 +375,10 @@ class _GrupoConta extends StatelessWidget {
         InsetRow(
           icon: Icons.timeline_rounded,
           tint: p.energy,
-          title: 'Meu progresso',
+          title: 'Meu perfil',
           subtitle: streak > 0
               ? 'sequência de $streak ${streak == 1 ? 'dia' : 'dias'}'
-              : 'histórico e últimos 7 dias',
+              : 'números, treinos e histórico',
           trailing: streak > 0
               ? Icon(Icons.local_fire_department_rounded,
                   size: 18, color: p.energy)

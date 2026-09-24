@@ -79,6 +79,17 @@ class AppUser {
 
   final DateTime? createdAt;
 
+  /// Papéis que a pessoa pode escolher, com o nome que aparece na tela.
+  static const Map<String, String> papeis = {
+    'mae': 'Mãe',
+    'pai': 'Pai',
+    'filho': 'Filho(a)',
+    'membro': 'Outro',
+  };
+
+  /// O papel para exibir; vazio quando é "outro" (não diz nada a ninguém).
+  String get papelLabel => role == 'membro' ? '' : (papeis[role] ?? '');
+
   /// Quantas cartas por semana cada integrante recebe.
   static const int cartasPorSemana = 1;
 
@@ -92,8 +103,9 @@ class AppUser {
   /// [pointsThisWeek]: em vez de alguém precisar rodar uma rotina toda
   /// segunda-feira, o contador simplesmente não vale fora da sua semana. Sem
   /// isso a carta acabava na primeira doação e não voltava nunca.
-  int get cartasDisponiveis =>
-      saveCardsWeekId == WeekUtils.currentWeekId() ? saveCards : cartasPorSemana;
+  int get cartasDisponiveis => saveCardsWeekId == WeekUtils.currentWeekId()
+      ? saveCards
+      : cartasPorSemana;
 
   bool get isActiveToday {
     final last = lastActivityAt;

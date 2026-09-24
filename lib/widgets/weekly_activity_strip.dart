@@ -77,8 +77,10 @@ class WeeklyActivityStrip extends StatelessWidget {
           ),
           const SizedBox(height: Space.lg),
           RepaintBoundary(
+            // Altura com folga para o valor e a letra do dia: com 104 a
+            // coluna estourava 3 px depois que a escala de texto mudou.
             child: SizedBox(
-              height: 104,
+              height: 112,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [

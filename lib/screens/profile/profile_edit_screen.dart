@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/palette.dart';
 import '../../core/theme/tokens.dart';
+import '../../models/app_user.dart';
 import '../../services/app_exception.dart';
 import '../../services/auth_service.dart';
 import '../../services/profile_service.dart';
@@ -15,6 +16,7 @@ import '../../widgets/ui/avatar_colors.dart';
 import '../../widgets/ui/avatar_picker.dart';
 import '../../widgets/ui/inset_group.dart';
 import '../../widgets/ui/pressable.dart';
+import '../../widgets/ui/segmentado.dart';
 
 /// Editar o próprio perfil: foto, nome que aparece para os outros, cor e senha.
 class ProfileEditScreen extends StatefulWidget {
@@ -40,13 +42,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   bool _salvando = false;
   bool _enviandoFoto = false;
   bool _iniciado = false;
-
-  static const Map<String, String> _papeis = {
-    'mae': 'Mãe',
-    'pai': 'Pai',
-    'filho': 'Filho(a)',
-    'membro': 'Outro',
-  };
 
   @override
   void dispose() {
@@ -84,7 +79,21 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final temFoto = user.photoUrl != null && user.photoUrl!.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Editar perfil')),
+      appBar: AppBar(
+        title: const Text('Editar perfil'),
+        // Salvar também no canto da barra, onde o iOS põe o "OK" — sem
+        // precisar rolar até o fim.
+        actions: [
+          TextButton(
+            onPressed: _salvando ? null : _salvar,
+            child: const Text(
+              'Salvar',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(width: Space.sm),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           Space.gutter,
@@ -166,7 +175,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
           ),
           const SizedBox(height: Space.xxl),
-
           InsetGroup(
             header: 'Como você aparece',
             footer: user.username.isEmpty
@@ -203,19 +211,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   ],
                 ),
               ),
-              InsetRow(
-                icon: Icons.family_restroom_rounded,
-                title: 'Papel na família',
-                showChevron: false,
-                trailing: DropdownButton<String>(
-                  value: _papel,
-                  underline: const SizedBox.shrink(),
-                  borderRadius: BorderRadius.circular(Radii.group),
-                  items: [
-                    for (final e in _papeis.entries)
-                      DropdownMenuItem(value: e.key, child: Text(e.value)),
+              // Segmentado do iOS no lugar do menu suspenso do Android:
+              // são só quatro opções, cabem todas à vista.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Space.lg,
+                  Space.md,
+                  Space.lg,
+                  Space.md,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Papel na família', style: t.bodySmall),
+                    const SizedBox(height: Space.sm),
+                    Segmentado<String>(
+                      opcoes: AppUser.papeis,
+                      atual: AppUser.papeis.containsKey(_papel)
+                          ? _papel!
+                          : 'membro',
+                      onMudar: (v) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _papel = v);
+                      },
+                    ),
                   ],
-                  onChanged: (v) => setState(() => _papel = v),
                 ),
               ),
               Padding(
@@ -255,7 +275,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ],
           ),
           const SizedBox(height: Space.xl),
-
           InsetGroup(
             header: 'Conta',
             footer: 'Sem e-mail cadastrado não existe recuperação: quem '
@@ -283,7 +302,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ],
           ),
           const SizedBox(height: Space.xxl),
-
           Pressable(
             onPressed: _salvando ? null : _salvar,
             padding: const EdgeInsets.symmetric(vertical: 17),
