@@ -34,7 +34,10 @@ class AppTheme {
       onSurface: p.textPrimary,
     );
 
-    final text = _textTheme(p);
+    // A fonte vai em cada estilo, e não só em ThemeData.fontFamily: os temas
+    // de botão e da barra de título recebem estes estilos direto, e sem a
+    // família neles o texto caía na fonte padrão do sistema.
+    final text = _textTheme(p).apply(fontFamily: fontFamily);
 
     return ThemeData(
       useMaterial3: true,
@@ -60,9 +63,8 @@ class AppTheme {
         centerTitle: false,
         foregroundColor: p.textPrimary,
         titleTextStyle: text.titleMedium,
-        systemOverlayStyle: p.isDark
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
+        systemOverlayStyle:
+            p.isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       ),
 
       dividerTheme: DividerThemeData(color: p.border, thickness: 1, space: 1),
@@ -107,9 +109,8 @@ class AppTheme {
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
             size: 22,
-            color: states.contains(WidgetState.selected)
-                ? p.accent
-                : p.textMuted,
+            color:
+                states.contains(WidgetState.selected) ? p.accent : p.textMuted,
           ),
         ),
       ),
@@ -117,7 +118,8 @@ class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: p.surface,
         surfaceTintColor: Colors.transparent,
-        modalBarrierColor: p.isDark ? const Color(0xCC000000) : const Color(0x66000000),
+        modalBarrierColor:
+            p.isDark ? const Color(0xCC000000) : const Color(0x66000000),
         shape: const RoundedRectangleBorder(borderRadius: Radii.sheet),
         showDragHandle: true,
         dragHandleColor: p.borderStrong,

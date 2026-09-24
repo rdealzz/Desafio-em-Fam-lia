@@ -14,6 +14,7 @@ class BarraMarcos extends StatelessWidget {
     required this.valor,
     this.marcos = const [],
     this.altura = 12,
+    this.inicio = 0,
   });
 
   /// 0.0 a 1.0.
@@ -23,12 +24,20 @@ class BarraMarcos extends StatelessWidget {
   final List<double> marcos;
   final double altura;
 
+  /// De onde a barra parte na primeira vez. Zero no painel; na comemoração
+  /// do registro, o valor de antes — para ver o pedaço que acabou de entrar.
+  final double inicio;
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
     final v = valor.clamp(0.0, 1.0);
 
+    // Largura cheia explícita: dentro de uma Column centralizada a barra
+    // encolhia até o tamanho do preenchimento — sumia o trilho e ela ficava
+    // no meio do cartão.
     return SizedBox(
+      width: double.infinity,
       height: altura,
       child: LayoutBuilder(
         builder: (context, box) {
@@ -45,7 +54,7 @@ class BarraMarcos extends StatelessWidget {
                 ),
               ),
               TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: v),
+                tween: Tween(begin: inicio.clamp(0.0, 1.0), end: v),
                 duration: const Duration(milliseconds: 700),
                 curve: Curves.easeOutCubic,
                 builder: (context, animado, _) {

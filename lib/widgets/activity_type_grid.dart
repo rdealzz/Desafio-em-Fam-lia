@@ -61,7 +61,7 @@ class _Grade extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: Space.md,
       crossAxisSpacing: Space.md,
-      childAspectRatio: 2.25,
+      childAspectRatio: 1.75,
       children: [
         for (final tipo in tipos)
           _Cartao(
@@ -100,25 +100,46 @@ class _Cartao extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(iconForActivity(tipo), size: 22, color: cor),
-          const SizedBox(width: Space.md),
+          // Ícone num selo: cinza em repouso, com o gradiente quando
+          // escolhido. Dá peso ao selecionado sem colorir a grade inteira.
+          AnimatedContainer(
+            duration: Motion.base,
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: selecionado ? null : p.surfaceSunken,
+              gradient: selecionado ? p.accentGradient : null,
+              borderRadius: BorderRadius.circular(Radii.sm),
+            ),
+            child: Icon(
+              iconForActivity(tipo),
+              size: 17,
+              color: selecionado ? p.onAccent : cor,
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  tipo.short,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: t.labelLarge?.copyWith(
-                    color: selecionado ? p.textPrimary : p.textPrimary,
+                // Encolhe um pouco em vez de cortar: "Alongame…" não diz
+                // nada, e o nome é o que a pessoa procura na grade.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    tipo.short,
+                    maxLines: 1,
+                    style: t.labelLarge?.copyWith(fontSize: 14),
                   ),
                 ),
                 const SizedBox(height: 2),
+                // Duas linhas: em celular estreito a regra inteira não cabe
+                // numa só, e cortada ela perdia justamente o tempo.
                 Text(
-                  '${tipo.blockPoints} pts / ${tipo.blockMinutes} min',
-                  maxLines: 1,
+                  '${tipo.blockPoints} pts a cada ${tipo.blockMinutes} min',
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: t.bodySmall,
                 ),
