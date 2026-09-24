@@ -113,7 +113,7 @@ class FirebaseBootstrap {
         await _connectEmulators().timeout(tempoLimite);
       }
 
-      await _manterSessao();  // tem prazo próprio, ver o método
+      await _guardarDadosNoAparelho(); // tem prazo próprio
 
       return const FirebaseStartup(FirebaseStartupStatus.ready);
     } on TimeoutException {
@@ -136,32 +136,37 @@ class FirebaseBootstrap {
     }
   }
 
-  /// Pede ao Firebase para guardar a sessão no aparelho.
+  /// Guarda uma cópia dos dados no aparelho (só no navegador).
   ///
-  /// No navegador o padrão já é este, mas "já é" não basta: quando o
-  /// armazenamento local está indisponível — navegador embutido de aplicativo
-  /// de mensagem, aba anônima, bloqueio de dados de site —, o SDK cai sozinho
-  /// para sessão só na memória, e aí toda abertura pede login de novo. Pedindo
-  /// explicitamente, o caso sem suporte vira um erro que dá para tratar, em
-  /// vez de um silêncio que vira atrito diário.
+  /// No celular o Firestore já guarda cópia em disco por padrão; no navegador
+  /// o padrão é só memória, e cada abertura começava do zero: tela vazia até
+  /// o servidor responder, e nada sem internet. Com a cópia no IndexedDB o
+  /// app abre com o cofre, a turma e o mural da última visita, e atualiza
+  /// quando a rede chega.
   ///
-  /// Fora da web não faz nada: no celular nativo a sessão já fica em disco, e
-  /// `setPersistence` nem é suportado lá.
-  static Future<void> _manterSessao() async {
+  /// `synchronizeTabs`: com duas abas abertas, as duas usam a mesma cópia.
+  /// Sem isso a segunda aba falharia ao pedir o armazenamento.
+  ///
+  /// E a sessão de login? Não é tocada aqui de propósito. O SDK web já
+  /// começa guardando no IndexedDB, com localStorage de reserva. A versão
+  /// anterior chamava `setPersistence(LOCAL)` a cada abertura, e isso **perdia
+  /// o login**: a troca apaga a sessão do IndexedDB antes de gravar no
+  /// localStorage — se a gravação falhasse (navegador embutido, modo privado,
+  /// armazenamento cheio) ou a aba fechasse no meio, a pessoa voltava
+  /// deslogada. Na abertura seguinte o SDK ainda movia tudo de volta para o
+  /// IndexedDB, repetindo o risco toda vez.
+  static Future<void> _guardarDadosNoAparelho() async {
     if (!kIsWeb) return;
     try {
-      // Prazo próprio, e curto: num navegador embutido com armazenamento
-      // travado esta chamada pode não voltar, e ela roda depois do prazo do
-      // `initializeApp` — sem isto, reproduziria exatamente a tela de
-      // carregando eterna que aquele prazo existe para evitar. Guardar a
-      // sessão é conforto; nunca vale prender o arranque.
-      await FirebaseAuth.instance
-          .setPersistence(Persistence.LOCAL)
+      // A troca sugerida (Settings.persistenceEnabled) liga o cache de uma
+      // aba só no navegador; a sincronização entre abas só existe aqui.
+      await FirebaseFirestore.instance
+          // ignore: deprecated_member_use
+          .enablePersistence(const PersistenceSettings(synchronizeTabs: true))
           .timeout(const Duration(seconds: 4));
     } catch (_) {
-      // Sem armazenamento disponível a sessão vale só enquanto a aba estiver
-      // aberta. Não é motivo para impedir o uso — é motivo para instalar o app
-      // na tela de início, que é o que a tela de entrada sugere.
+      // Modo privado ou armazenamento bloqueado: segue só com memória, como
+      // era antes. É conforto, nunca motivo para travar o arranque.
     }
   }
 

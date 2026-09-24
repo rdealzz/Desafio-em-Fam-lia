@@ -5,8 +5,10 @@ import '../core/theme/palette.dart';
 import '../core/theme/tokens.dart';
 import '../core/utils/firestore_utils.dart';
 import '../core/utils/formatters.dart';
+import '../models/activity_type.dart';
 import '../models/feed_post.dart';
 import 'avatar_bubble.dart';
+import 'ui/activity_icons.dart';
 import 'ui/avatar_animals.dart';
 import 'ui/feed_photo.dart';
 import 'ui/primitives.dart';
@@ -14,9 +16,15 @@ import 'ui/reaction_icons.dart';
 
 /// Publicação do mural.
 ///
-/// Foto em destaque, texto sóbrio, reações discretas. As cartas de brincadeira
-/// ganham uma faixa fina no topo em vez de contorno colorido no cartão inteiro
-/// — sinaliza o tipo sem transformar o feed num mostruário de cores.
+/// Três formatos, porque são três coisas diferentes:
+///
+/// - **Treino**: quem, o quê e quanto rendeu no topo; a foto com cantos
+///   próprios, recuada do cartão como numa revista; e as reações embaixo.
+///   Dois toques na foto dão 🔥, como todo mundo já espera de um feed.
+/// - **Carta** (desafio, punição, salva): uma faixa na cor da carta com o
+///   ícone, e o texto em destaque — a carta *é* a frase.
+/// - **Prêmio liberado**: cartão dourado. É o momento de comemorar da semana,
+///   não pode parecer mais um post.
 class FeedPostCard extends StatelessWidget {
   const FeedPostCard({
     super.key,
@@ -29,34 +37,46 @@ class FeedPostCard extends StatelessWidget {
   final String currentUserId;
   final ValueChanged<String> onReaction;
 
+  /// A reação dos dois toques na foto.
+  static const String reacaoRapida = 'fire';
+
+  bool get _premio =>
+      post.type == FeedPostType.rewardUnlocked ||
+      post.type == FeedPostType.system;
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final t = Theme.of(context).textTheme;
-    final temFotoAutor =
-        post.authorPhotoUrl != null && post.authorPhotoUrl!.isNotEmpty;
-    // Aviso do próprio app (prêmio liberado) não tem dono: leva o troféu em
-    // vez de um bicho sorteado, que sugeriria que alguém publicou aquilo.
-    final doApp = post.authorId == 'system';
-    final bichoAutor = ColoredBox(
-      color: doApp ? p.accentSoft : p.surfaceSunken,
-      child: Center(
-        child: doApp
-            ? Icon(Icons.emoji_events_rounded, size: 18, color: p.accent)
-            : AnimalGlyph(
-                emoji: AvatarAnimals.resolver(post.authorAvatar, post.authorId),
-                size: 19,
-              ),
-      ),
-    );
     final foto = FeedPhoto.para(post);
 
     return RepaintBoundary(
       child: Container(
         decoration: BoxDecoration(
           color: p.surface,
-          borderRadius: BorderRadius.circular(Radii.lg),
-          border: Border.all(color: p.border),
+          borderRadius: BorderRadius.circular(Radii.xl),
+          border: Border.all(
+            color: _premio ? p.gold.withValues(alpha: 0.45) : p.border,
+          ),
+          gradient: _premio
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.alphaBlend(
+                      p.gold.withValues(alpha: p.isDark ? 0.16 : 0.12),
+                      p.surface,
+                    ),
+                    p.surface,
+                  ],
+                )
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: p.shadow,
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -66,61 +86,11 @@ class FeedPostCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 Space.lg,
-                Space.md,
+                Space.lg,
                 Space.lg,
                 0,
               ),
-              child: Row(
-                children: [
-                  // Mesmo bicho que aparece no painel: o post guarda o
-                  // avatar de quem publicou, então a linha do mural bate com
-                  // a lista de integrantes.
-                  ClipOval(
-                    child: SizedBox(
-                      width: 34,
-                      height: 34,
-                      child: temFotoAutor
-                          ? Image.network(
-                              post.authorPhotoUrl!,
-                              fit: BoxFit.cover,
-                              cacheWidth: 102,
-                              errorBuilder: (_, __, ___) => bichoAutor,
-                            )
-                          : bichoAutor,
-                    ),
-                  ),
-                  const SizedBox(width: Space.md),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            post.authorName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: t.labelLarge,
-                          ),
-                        ),
-                        const SizedBox(width: Space.sm),
-                        Text(
-                          post.createdAt == null
-                              ? 'agora'
-                              : Formatters.timeAgo(post.createdAt!),
-                          style: t.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (post.points > 0)
-                    Text(
-                      '+${Formatters.points(post.points)}',
-                      style: t.labelLarge?.copyWith(
-                        color: p.accent,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                ],
-              ),
+              child: _Cabecalho(post: post),
             ),
             if (post.message.isNotEmpty)
               Padding(
@@ -130,9 +100,10 @@ class FeedPostCard extends StatelessWidget {
                   Space.lg,
                   0,
                 ),
-                child: Text(post.message, style: t.bodyLarge),
+                child: _Mensagem(post: post),
               ),
-            if (post.durationMinutes > 0 || post.metadata['offlineSync'] == true)
+            if (post.durationMinutes > 0 ||
+                post.metadata['offlineSync'] == true)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   Space.lg,
@@ -140,58 +111,42 @@ class FeedPostCard extends StatelessWidget {
                   Space.lg,
                   0,
                 ),
-                child: Wrap(
-                  spacing: Space.sm,
-                  runSpacing: Space.sm,
-                  children: [
-                    if (post.durationMinutes > 0)
-                      MetaChip(
-                        icon: Icons.schedule_rounded,
-                        label: Formatters.duration(post.durationMinutes),
-                      ),
-                    if (_num(post.metadata['steps']) > 0)
-                      MetaChip(
-                        icon: Icons.directions_walk_rounded,
-                        label: '${_num(post.metadata['steps'])} passos',
-                      ),
-                    if (_num(post.metadata['streak']) > 1)
-                      MetaChip(
-                        icon: Icons.bolt_rounded,
-                        label: '${_num(post.metadata['streak'])} dias',
-                      ),
-                    if (post.metadata['offlineSync'] == true)
-                      MetaChip(
-                        icon: Icons.cloud_done_outlined,
-                        label: _rotuloOffline(post),
-                      ),
-                  ],
+                child: _Metadados(post: post),
+              ),
+            if (foto != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Space.md,
+                  Space.md,
+                  Space.md,
+                  0,
+                ),
+                child: _FotoComToqueDuplo(
+                  foto: foto,
+                  onToqueDuplo: () {
+                    // Toque duplo só liga: desligar por engano seria pior do
+                    // que não fazer nada.
+                    if (post.hasReacted(reacaoRapida, currentUserId)) return;
+                    HapticFeedback.mediumImpact();
+                    onReaction(reacaoRapida);
+                  },
                 ),
               ),
-            if (foto != null) ...[
-              const SizedBox(height: Space.md),
-              foto,
-            ],
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Space.md,
-                Space.md,
-                Space.md,
-                Space.md,
-              ),
-              child: Row(
+              padding: const EdgeInsets.all(Space.md),
+              child: Wrap(
+                spacing: Space.sm,
+                runSpacing: Space.sm,
                 children: [
                   for (final e in Reactions.available.entries)
-                    Padding(
-                      padding: const EdgeInsets.only(right: Space.sm),
-                      child: _Reacao(
-                        icone: iconForReaction(e.key),
-                        count: post.reactionCount(e.key),
-                        ativa: post.hasReacted(e.key, currentUserId),
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          onReaction(e.key);
-                        },
-                      ),
+                    _Reacao(
+                      icone: iconForReaction(e.key),
+                      count: post.reactionCount(e.key),
+                      ativa: post.hasReacted(e.key, currentUserId),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        onReaction(e.key);
+                      },
                     ),
                 ],
               ),
@@ -201,6 +156,186 @@ class FeedPostCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Avatar, nome, o que fez e quando — e os pontos em destaque à direita.
+class _Cabecalho extends StatelessWidget {
+  const _Cabecalho({required this.post});
+
+  final FeedPost post;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final quando =
+        post.createdAt == null ? 'agora' : Formatters.timeAgo(post.createdAt!);
+    final treino = post.type == FeedPostType.activity;
+    final tipo = treino
+        ? ActivityType.fromId(post.metadata['activityType'] as String?)
+        : null;
+
+    final oQue = switch (post.type) {
+      FeedPostType.activity => tipo!.label,
+      FeedPostType.saveCard => 'usou a Salva-Mãe/Pai',
+      FeedPostType.impossibleChallenge => 'lançou um desafio',
+      FeedPostType.punishment => 'lançou uma prenda',
+      FeedPostType.rewardUnlocked => 'prêmio liberado',
+      FeedPostType.system => 'aviso',
+    };
+
+    return Row(
+      children: [
+        _AvatarAutor(post: post),
+        const SizedBox(width: Space.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                post.authorId == 'system'
+                    ? 'Cofre da família'
+                    : post.authorName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: t.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  if (tipo != null) ...[
+                    Icon(iconForActivity(tipo), size: 13, color: p.textMuted),
+                    const SizedBox(width: 4),
+                  ],
+                  Flexible(
+                    child: Text(
+                      '$oQue · $quando',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: t.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (post.points > 0) ...[
+          const SizedBox(width: Space.sm),
+          _Pontos(pontos: post.points),
+        ],
+      ],
+    );
+  }
+}
+
+/// Foto do autor, ou o bicho dele; o troféu quando quem fala é o app.
+class _AvatarAutor extends StatelessWidget {
+  const _AvatarAutor({required this.post});
+
+  final FeedPost post;
+
+  static const double _tam = 40;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    // Aviso do próprio app (prêmio liberado) não tem dono: leva o troféu em
+    // vez de um bicho sorteado, que sugeriria que alguém publicou aquilo.
+    final doApp = post.authorId == 'system';
+    final temFoto =
+        post.authorPhotoUrl != null && post.authorPhotoUrl!.isNotEmpty;
+
+    final bicho = ColoredBox(
+      color: doApp ? p.gold.withValues(alpha: 0.18) : p.surfaceSunken,
+      child: Center(
+        child: doApp
+            ? Icon(Icons.emoji_events_rounded, size: 20, color: p.gold)
+            : AnimalGlyph(
+                emoji: AvatarAnimals.resolver(post.authorAvatar, post.authorId),
+                size: 22,
+              ),
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: p.border, width: 1.5),
+      ),
+      child: ClipOval(
+        child: SizedBox(
+          width: _tam - 7,
+          height: _tam - 7,
+          child: temFoto
+              ? Image.network(
+                  post.authorPhotoUrl!,
+                  fit: BoxFit.cover,
+                  cacheWidth: 120,
+                  errorBuilder: (_, __, ___) => bicho,
+                )
+              : bicho,
+        ),
+      ),
+    );
+  }
+}
+
+/// "+150" numa pílula com o gradiente do cofre: são os pontos que entraram.
+class _Pontos extends StatelessWidget {
+  const _Pontos({required this.pontos});
+
+  final int pontos;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: p.accentGradient,
+        borderRadius: BorderRadius.circular(Radii.pill),
+      ),
+      child: Text(
+        '+${Formatters.points(pontos)}',
+        style: TextStyle(
+          color: p.onAccent,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
+}
+
+/// O texto do post. Em carta, a frase é o conteúdo: fica maior.
+class _Mensagem extends StatelessWidget {
+  const _Mensagem({required this.post});
+
+  final FeedPost post;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final destaque = post.isCard ||
+        post.type == FeedPostType.rewardUnlocked ||
+        post.type == FeedPostType.system;
+
+    return Text(
+      post.message,
+      style: destaque
+          ? t.titleMedium?.copyWith(fontSize: 17, height: 1.35)
+          : t.bodyLarge,
+    );
+  }
+}
+
+class _Metadados extends StatelessWidget {
+  const _Metadados({required this.post});
+
+  final FeedPost post;
 
   static int _num(Object? v) => v is num ? v.toInt() : 0;
 
@@ -208,9 +343,127 @@ class FeedPostCard extends StatelessWidget {
     final at = FirestoreUtils.toDateTime(post.metadata['performedAt']);
     return at == null ? 'offline' : 'feito ${Formatters.timeAgo(at)}';
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final passos = _num(post.metadata['steps']);
+    final sequencia = _num(post.metadata['streak']);
+
+    return Wrap(
+      spacing: Space.sm,
+      runSpacing: Space.sm,
+      children: [
+        if (post.durationMinutes > 0)
+          MetaChip(
+            icon: Icons.schedule_rounded,
+            label: Formatters.duration(post.durationMinutes),
+          ),
+        if (passos > 0)
+          MetaChip(
+            icon: Icons.directions_walk_rounded,
+            label: '${Formatters.points(passos)} passos',
+          ),
+        if (sequencia > 1)
+          MetaChip(
+            icon: Icons.local_fire_department_rounded,
+            label: '$sequencia dias seguidos',
+            tone: p.energy,
+          ),
+        if (post.metadata['offlineSync'] == true)
+          MetaChip(
+            icon: Icons.cloud_done_outlined,
+            label: _rotuloOffline(post),
+          ),
+      ],
+    );
+  }
 }
 
-class _Reacao extends StatelessWidget {
+/// A foto com cantos próprios e o 🔥 que aparece no toque duplo.
+class _FotoComToqueDuplo extends StatefulWidget {
+  const _FotoComToqueDuplo({required this.foto, required this.onToqueDuplo});
+
+  final Widget foto;
+  final VoidCallback onToqueDuplo;
+
+  @override
+  State<_FotoComToqueDuplo> createState() => _FotoComToqueDuploState();
+}
+
+class _FotoComToqueDuploState extends State<_FotoComToqueDuplo>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+  );
+
+  // Cresce com mola, segura um instante e some.
+  late final Animation<double> _escala = TweenSequence([
+    TweenSequenceItem(
+      tween: Tween(begin: 0.4, end: 1.15)
+          .chain(CurveTween(curve: Curves.easeOutBack)),
+      weight: 35,
+    ),
+    TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 25),
+    TweenSequenceItem(tween: ConstantTween(1.0), weight: 40),
+  ]).animate(_c);
+
+  late final Animation<double> _opacidade = TweenSequence([
+    TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 20),
+    TweenSequenceItem(tween: ConstantTween(1.0), weight: 50),
+    TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+  ]).animate(_c);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onDoubleTap: () {
+        widget.onToqueDuplo();
+        _c.forward(from: 0);
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Radii.lg),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            widget.foto,
+            IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _c,
+                builder: (context, _) => _c.isDismissed
+                    ? const SizedBox.shrink()
+                    : Opacity(
+                        opacity: _opacidade.value,
+                        child: Transform.scale(
+                          scale: _escala.value,
+                          child: const Icon(
+                            Icons.local_fire_department_rounded,
+                            size: 88,
+                            color: Colors.white,
+                            shadows: [
+                              Shadow(color: Color(0x66000000), blurRadius: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Pílula de reação que dá um pulinho quando é ligada.
+class _Reacao extends StatefulWidget {
   const _Reacao({
     required this.icone,
     required this.count,
@@ -224,43 +477,86 @@ class _Reacao extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_Reacao> createState() => _ReacaoState();
+}
+
+class _ReacaoState extends State<_Reacao> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+  );
+
+  late final Animation<double> _escala = TweenSequence([
+    TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.18), weight: 40),
+    TweenSequenceItem(
+      tween: Tween(begin: 1.18, end: 1.0)
+          .chain(CurveTween(curve: Curves.easeOutBack)),
+      weight: 60,
+    ),
+  ]).animate(_c);
+
+  @override
+  void didUpdateWidget(_Reacao anterior) {
+    super.didUpdateWidget(anterior);
+    // Pula quando liga, venha de onde vier (toque aqui ou toque duplo na
+    // foto). Desligar é silencioso.
+    if (widget.ativa && !anterior.ativa) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    final ativa = widget.ativa;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: Motion.fast,
-        padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: 6),
-        decoration: BoxDecoration(
-          color: ativa ? p.accentSoft : p.surfaceSunken,
-          borderRadius: BorderRadius.circular(Radii.sm),
-          border: Border.all(
-            color: ativa ? p.accent : Colors.transparent,
+      child: ScaleTransition(
+        scale: _escala,
+        child: AnimatedContainer(
+          duration: Motion.fast,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: ativa ? p.accentSoft : p.surfaceSunken,
+            borderRadius: BorderRadius.circular(Radii.pill),
+            border: Border.all(
+              color:
+                  ativa ? p.accent.withValues(alpha: 0.6) : Colors.transparent,
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icone, size: 15, color: ativa ? p.accent : p.textSecondary),
-            if (count > 0) ...[
-              const SizedBox(width: 4),
-              Text(
-                '$count',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: ativa ? p.accent : p.textMuted,
-                      fontWeight: FontWeight.w600,
-                    ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.icone,
+                size: 16,
+                color: ativa ? p.accent : p.textSecondary,
               ),
+              if (widget.count > 0) ...[
+                const SizedBox(width: 5),
+                Text(
+                  '${widget.count}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: ativa ? p.accent : p.textSecondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
+/// Faixa das cartas: a cor e o ícone da carta, em degradê até sumir.
 class _Faixa extends StatelessWidget {
   const _Faixa({required this.post});
 
@@ -279,22 +575,33 @@ class _Faixa extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
         horizontal: Space.lg,
-        vertical: Space.sm,
+        vertical: 10,
       ),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: cor, width: 2)),
+        gradient: LinearGradient(
+          colors: [
+            cor.withValues(alpha: p.isDark ? 0.24 : 0.14),
+            cor.withValues(alpha: 0),
+          ],
+        ),
       ),
-      child: Text(
-        switch (post.type) {
-          FeedPostType.saveCard => 'CARTA SALVA-MÃE/PAI',
-          FeedPostType.impossibleChallenge => 'DESAFIO IMPOSSÍVEL',
-          FeedPostType.punishment => 'PUNIÇÃO LEVE',
-          _ => 'AVISO',
-        },
-        style: Theme.of(context)
-            .textTheme
-            .labelMedium
-            ?.copyWith(color: cor, fontWeight: FontWeight.w800),
+      child: Row(
+        children: [
+          Icon(iconForPostType(post.type), size: 16, color: cor),
+          const SizedBox(width: Space.sm),
+          Text(
+            switch (post.type) {
+              FeedPostType.saveCard => 'CARTA SALVA-MÃE/PAI',
+              FeedPostType.impossibleChallenge => 'DESAFIO IMPOSSÍVEL',
+              FeedPostType.punishment => 'PUNIÇÃO LEVE',
+              _ => 'AVISO',
+            },
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
+                ?.copyWith(color: cor, fontWeight: FontWeight.w800),
+          ),
+        ],
       ),
     );
   }
