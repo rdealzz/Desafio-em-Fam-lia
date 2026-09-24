@@ -6,21 +6,15 @@ import '../../core/theme/tokens.dart';
 
 enum PressableTone { primary, neutral, ghost, danger }
 
-/// Botão com a resposta de toque da Apple.
+/// Botão no jeito do iOS: chapado, e responde ao toque apagando um pouco.
 ///
-/// Dois movimentos ao mesmo tempo, que é o que dá a sensação física:
+/// A versão anterior tinha um degrau sólido embaixo que "afundava" e voltava
+/// com mola — divertido, mas é a linguagem de fliperama. No iOS o botão não
+/// tem profundidade: sob o dedo ele fica mais claro e encolhe de leve, e
+/// solta sem ultrapassar.
 ///
-/// 1. **Encolhe sob o dedo** (escala 1 → 0,96). É o gesto característico do
-///    iOS — o botão responde onde o dedo está, mesmo quando o dedo o cobre.
-/// 2. **Afunda** na base sólida, sumindo com o degrau.
-///
-/// Ao soltar, volta com leve ultrapassagem (`easeOutBack`), como mola. Descer
-/// é mais rápido que subir: reagir tem de ser instantâneo, voltar pode
-/// respirar.
-///
-/// **60 fps**: só as matrizes de Transform refazem por quadro. O conteúdo
-/// entra como `child` do AnimatedBuilder e é construído uma vez; Transform é
-/// pintura, não layout, então nada é remedido durante a animação.
+/// **60 fps**: só opacidade e escala mudam por quadro; o conteúdo entra como
+/// `child` do AnimatedBuilder e é construído uma vez.
 class Pressable extends StatefulWidget {
   const Pressable({
     super.key,
@@ -32,7 +26,6 @@ class Pressable extends StatefulWidget {
       vertical: Space.lg,
     ),
     this.radius = Radii.button,
-    this.depth = Depth.press,
     this.expand = true,
     this.enabled = true,
   });
@@ -42,7 +35,6 @@ class Pressable extends StatefulWidget {
   final PressableTone tone;
   final EdgeInsets padding;
   final double radius;
-  final double depth;
   final bool expand;
   final bool enabled;
 
@@ -55,11 +47,15 @@ class _PressableState extends State<Pressable>
   late final AnimationController _c = AnimationController(
     vsync: this,
     duration: Motion.instant,
-    reverseDuration: Motion.fast,
+    reverseDuration: Motion.base,
   );
 
   late final Animation<double> _escala = _c.drive(
-    Tween(begin: 1.0, end: 0.96).chain(CurveTween(curve: Motion.press)),
+    Tween(begin: 1.0, end: 0.98).chain(CurveTween(curve: Curves.easeOut)),
+  );
+
+  late final Animation<double> _opacidade = _c.drive(
+    Tween(begin: 1.0, end: 0.65).chain(CurveTween(curve: Curves.easeOut)),
   );
 
   bool get _ativo => widget.enabled && widget.onPressed != null;
@@ -84,8 +80,7 @@ class _PressableState extends State<Pressable>
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final (face, base, onFace) = _cores(p);
-    final depth = widget.depth;
+    final (face, onFace) = _cores(p);
 
     final conteudo = Container(
       width: widget.expand ? double.infinity : null,
@@ -93,9 +88,6 @@ class _PressableState extends State<Pressable>
       decoration: BoxDecoration(
         color: face,
         borderRadius: BorderRadius.circular(widget.radius),
-        border: widget.tone == PressableTone.ghost
-            ? Border.all(color: p.border)
-            : null,
       ),
       child: DefaultTextStyle.merge(
         style: TextStyle(
@@ -115,7 +107,9 @@ class _PressableState extends State<Pressable>
 
     return RepaintBoundary(
       child: Opacity(
-        opacity: _ativo ? 1 : 0.4,
+        // Desligado no iOS é esmaecido, não cinza: a cor continua dizendo o
+        // que o botão faz.
+        opacity: _ativo ? 1 : 0.35,
         child: GestureDetector(
           onTapDown: _descer,
           onTapUp: _subir,
@@ -124,34 +118,10 @@ class _PressableState extends State<Pressable>
           behavior: HitTestBehavior.opaque,
           child: AnimatedBuilder(
             animation: _c,
-            // Construído uma vez; o quadro só recalcula as transformações.
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  top: depth,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: base,
-                      borderRadius: BorderRadius.circular(widget.radius),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(bottom: depth),
-                  child: conteudo,
-                ),
-              ],
-            ),
-            builder: (context, child) => Transform.scale(
-              scale: _escala.value,
-              child: Transform.translate(
-                offset: Offset(0, depth * _c.value),
-                child: child,
-              ),
+            child: conteudo,
+            builder: (context, child) => Opacity(
+              opacity: _opacidade.value,
+              child: Transform.scale(scale: _escala.value, child: child),
             ),
           ),
         ),
@@ -159,16 +129,18 @@ class _PressableState extends State<Pressable>
     );
   }
 
-  (Color face, Color base, Color onFace) _cores(Palette p) {
+  /// Os estilos de botão do iOS: preenchido, cinza com texto azul, só texto,
+  /// e destrutivo.
+  (Color face, Color onFace) _cores(Palette p) {
     switch (widget.tone) {
       case PressableTone.primary:
-        return (p.accent, p.accentShadow, p.onAccent);
+        return (p.accent, p.onAccent);
       case PressableTone.neutral:
-        return (p.surfaceRaised, p.border, p.textPrimary);
+        return (p.surfaceSunken, p.accent);
       case PressableTone.ghost:
-        return (p.surface, p.border, p.textPrimary);
+        return (Colors.transparent, p.accent);
       case PressableTone.danger:
-        return (p.danger, const Color(0xFF9B3232), Colors.white);
+        return (p.danger, Colors.white);
     }
   }
 }
@@ -205,7 +177,7 @@ class _PressableCardState extends State<PressableCard>
   );
 
   late final Animation<double> _escala = _c.drive(
-    Tween(begin: 1.0, end: 0.975).chain(CurveTween(curve: Motion.press)),
+    Tween(begin: 1.0, end: 0.98).chain(CurveTween(curve: Curves.easeOut)),
   );
 
   @override
@@ -243,9 +215,11 @@ class _PressableCardState extends State<PressableCard>
             decoration: BoxDecoration(
               color: sel ? p.accentSoft : p.surface,
               borderRadius: BorderRadius.circular(widget.radius),
+              // Sem contorno em repouso (o cartão se separa do fundo pela
+              // cor); o azul aparece só no escolhido.
               border: Border.all(
-                color: sel ? p.accent : p.border,
-                width: sel ? 1.5 : 1,
+                color: sel ? p.accent : Colors.transparent,
+                width: 1.5,
               ),
             ),
             child: widget.child,

@@ -15,8 +15,10 @@ class SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Recuado como os cabeçalhos de grupo do iOS: o título fica alinhado
+    // com o texto de dentro do cartão, não com a borda dele.
     return Padding(
-      padding: const EdgeInsets.only(bottom: Space.md),
+      padding: const EdgeInsets.fromLTRB(Space.md, 0, Space.md, Space.sm),
       child: Row(
         children: [
           Expanded(
@@ -32,7 +34,8 @@ class SectionLabel extends StatelessWidget {
   }
 }
 
-/// Superfície padrão: um retângulo de conteúdo com borda discreta.
+/// Superfície padrão: um cartão que se separa do fundo pela cor, sem
+/// contorno — como os grupos do iOS.
 class Surface extends StatelessWidget {
   const Surface({
     super.key,
@@ -40,7 +43,7 @@ class Surface extends StatelessWidget {
     this.padding = const EdgeInsets.all(Space.lg),
     this.radius = Radii.lg,
     this.color,
-    this.border = true,
+    this.border = false,
   });
 
   final Widget child;

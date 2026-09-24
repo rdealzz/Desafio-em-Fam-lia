@@ -47,26 +47,46 @@ class Family {
   final List<Reward> rewards;
   final DateTime? createdAt;
 
+  /// Pontos do cofre que valem agora.
+  ///
+  /// O cofre só é zerado de verdade no primeiro registro da semana nova (ver
+  /// `ActivityService`). Até lá o documento ainda guarda o total da semana
+  /// passada — e a tela da segunda de manhã mostrava a meta "batida" e os
+  /// prêmios "liberados" de uma semana que já acabou. Mesmo truque de
+  /// `AppUser.pointsThisWeek`: fora da sua semana, o número não vale.
+  int get vaultThisWeek => needsWeeklyReset ? 0 : vaultPoints;
+
+  /// Prêmios como estão nesta semana: com a semana virada, todos voltam a
+  /// estar trancados, igual ao que a transação vai gravar no próximo registro.
+  List<Reward> get rewardsThisWeek => needsWeeklyReset
+      ? [for (final r in rewards) r.unlocked ? r.relocked() : r]
+      : rewards;
+
   /// 0.0 a 1.0 — pronto para alimentar a ProgressBar do dashboard.
   double get progress {
     if (weeklyGoal <= 0) return 0;
-    return (vaultPoints / weeklyGoal).clamp(0.0, 1.0);
+    return (vaultThisWeek / weeklyGoal).clamp(0.0, 1.0);
   }
 
-  int get pointsRemaining => (weeklyGoal - vaultPoints).clamp(0, weeklyGoal);
+  int get pointsRemaining => (weeklyGoal - vaultThisWeek).clamp(0, weeklyGoal);
 
-  bool get goalReached => vaultPoints >= weeklyGoal;
+  bool get goalReached => weeklyGoal > 0 && vaultThisWeek >= weeklyGoal;
 
   /// True quando o cofre ainda aponta para uma semana anterior — o próximo
   /// registro de atividade faz a virada (ver `ActivityService`).
   bool get needsWeeklyReset => weekId != WeekUtils.currentWeekId();
 
   List<Reward> get unlockedRewards =>
-      rewards.where((reward) => reward.unlocked).toList();
+      rewardsThisWeek.where((reward) => reward.unlocked).toList();
 
   /// Próximo prêmio a ser desbloqueado, ou null se todos já caíram.
+  ///
+  /// Prêmio que o cofre já passou não conta, mesmo sem a marca de liberado:
+  /// senão a tela dizia "faltam -100 pts para a Pizza".
   Reward? get nextReward {
-    final pending = rewards.where((r) => !r.unlocked).toList()
+    final pending = rewardsThisWeek
+        .where((r) => !r.unlocked && r.requiredPoints > vaultThisWeek)
+        .toList()
       ..sort((a, b) => a.requiredPoints.compareTo(b.requiredPoints));
     return pending.isEmpty ? null : pending.first;
   }

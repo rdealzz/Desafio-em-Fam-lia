@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/palette.dart';
 import '../../core/theme/tokens.dart';
 import '../../services/activity_sync_service.dart';
 import '../../state/session_controller.dart';
@@ -67,6 +70,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Scaffold(
       body: PageView(
         controller: _pager,
@@ -78,26 +82,49 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           const FeedScreen(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: _irPara,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'A Casa',
+      // Barra de abas do iOS (CupertinoTabBar): ícones no traço dos SF
+      // Symbols, sem a pílula de seleção do Material, fio fino no topo.
+      bottomNavigationBar: CupertinoTheme(
+        data: CupertinoThemeData(
+          primaryColor: p.accent,
+          textTheme: const CupertinoTextThemeData(
+            tabLabelTextStyle: TextStyle(
+              fontFamily: AppTheme.fontFamily,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.1,
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.add_circle_outline_rounded),
-            selectedIcon: Icon(Icons.add_circle_rounded),
-            label: 'Registrar',
+        ),
+        child: CupertinoTabBar(
+          currentIndex: _index,
+          onTap: _irPara,
+          height: 54,
+          iconSize: 25,
+          activeColor: p.accent,
+          inactiveColor: p.textMuted,
+          backgroundColor: p.surface,
+          border: Border(
+            top: BorderSide(color: p.borderStrong, width: 0.5),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.forum_outlined),
-            selectedIcon: Icon(Icons.forum_rounded),
-            label: 'Mural',
-          ),
-        ],
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.house),
+              activeIcon: Icon(CupertinoIcons.house_fill),
+              label: 'A Casa',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.plus_circle),
+              activeIcon: Icon(CupertinoIcons.plus_circle_fill),
+              label: 'Registrar',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.chat_bubble_2),
+              activeIcon: Icon(CupertinoIcons.chat_bubble_2_fill),
+              label: 'Mural',
+            ),
+          ],
+        ),
       ),
     );
   }

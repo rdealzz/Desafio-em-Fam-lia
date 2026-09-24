@@ -45,7 +45,9 @@ flutter:
 
   # Inter empacotada em vez de baixada em tempo de execução: sem requisição
   # extra e sem o piscar de texto sem estilo no primeiro carregamento.
-  # Três pesos só — cada arquivo pesa ~400 KB.
+  # Três pesos só — cada arquivo pesa ~400 KB. Bold (700) no lugar do
+  # ExtraBold: é o peso dos títulos no iOS; o 800 deixava tudo com cara de
+  # placar de fliperama. Quem pedir w800 cai no Bold.
   fonts:
     - family: Inter
       fonts:
@@ -53,8 +55,8 @@ flutter:
           weight: 400
         - asset: assets/fonts/Inter-SemiBold.ttf
           weight: 600
-        - asset: assets/fonts/Inter-ExtraBold.ttf
-          weight: 800
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
 
     # Emoji de bicho para os avatares. Recorte da Noto Color Emoji (OFL) com
     # só os 22 desenhos usados: 44 KB em vez dos 10 MB do arquivo completo.

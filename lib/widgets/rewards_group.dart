@@ -31,6 +31,7 @@ class RewardsGroup extends StatelessWidget {
 
     return InsetGroup(
       header: 'Prêmios',
+      dividerIndent: Space.lg + 36 + Space.md,
       trailing: Text('$liberados liberados', style: t.bodySmall),
       footer: 'O cofre libera cada prêmio ao passar dos pontos indicados.',
       children: [
@@ -58,9 +59,8 @@ class RewardsGroup extends StatelessWidget {
             trailing: SizedBox(
               width: 56,
               child: ProgressBarThin(
-                value: r.requiredPoints == 0
-                    ? 1
-                    : vaultPoints / r.requiredPoints,
+                value:
+                    r.requiredPoints == 0 ? 1 : vaultPoints / r.requiredPoints,
                 height: 4,
                 color: r.unlocked ? p.accent : p.borderStrong,
               ),

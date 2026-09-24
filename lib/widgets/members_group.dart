@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/palette.dart';
+import '../core/theme/tokens.dart';
 import '../core/utils/formatters.dart';
 import '../models/app_user.dart';
 import 'avatar_bubble.dart';
@@ -39,6 +40,7 @@ class MembersGroup extends StatelessWidget {
 
     return InsetGroup(
       header: 'A turma esta semana',
+      dividerIndent: Space.lg + 38 + Space.md,
       trailing: Text('$totalMembros de 4', style: t.bodySmall),
       children: [
         for (final m in members)

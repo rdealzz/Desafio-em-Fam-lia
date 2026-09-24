@@ -65,6 +65,18 @@ class Reward {
         unlockedAt: unlockedAt ?? this.unlockedAt,
       );
 
+  /// O mesmo prêmio de volta ao cadeado, para a semana nova.
+  ///
+  /// Existe à parte de [copyWith] porque ele não sabe apagar [unlockedAt].
+  Reward relocked() => Reward(
+        id: id,
+        title: title,
+        description: description,
+        emoji: emoji,
+        requiredPoints: requiredPoints,
+        level: level,
+      );
+
   /// Prêmios sugeridos ao criar uma família nova. A família edita depois.
   static List<Reward> defaults(int weeklyGoal) => [
         Reward(

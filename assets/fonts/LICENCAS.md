@@ -1,6 +1,6 @@
 # Fontes empacotadas
 
-## Inter — `Inter-Regular.ttf`, `Inter-SemiBold.ttf`, `Inter-ExtraBold.ttf`
+## Inter — `Inter-Regular.ttf`, `Inter-SemiBold.ttf`, `Inter-Bold.ttf`
 SIL Open Font License 1.1 · https://github.com/rsms/inter
 
 ## AnimalEmoji — `AnimalEmoji.ttf`
