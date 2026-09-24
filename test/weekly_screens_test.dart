@@ -44,7 +44,7 @@ void main() {
     // acusaria estouro que não existe no aparelho. Com a Inter de verdade, o
     // estouro que aparecer aqui aparece no celular também.
     final inter = FontLoader('Inter');
-    for (final peso in ['Regular', 'SemiBold', 'ExtraBold']) {
+    for (final peso in ['Regular', 'SemiBold', 'Bold']) {
       final bytes = File('assets/fonts/Inter-$peso.ttf').readAsBytesSync();
       inter.addFont(Future.value(ByteData.sublistView(bytes)));
     }

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/palette.dart';
 import '../../core/theme/tokens.dart';
 
-/// Barra de progresso com gradiente e marcos no caminho.
+/// Barra de progresso chapada, no azul do sistema, com marcos no caminho.
 ///
 /// Os marcos são os prêmios: um pontinho em cada ponto da barra onde um
 /// prêmio libera. Dá para ver de relance que a pizza está logo ali e o açaí
@@ -66,16 +66,8 @@ class BarraMarcos extends StatelessWidget {
                     width: w,
                     height: altura,
                     decoration: BoxDecoration(
-                      gradient: p.accentGradient,
+                      color: p.accent,
                       borderRadius: BorderRadius.circular(altura),
-                      boxShadow: [
-                        BoxShadow(
-                          color: p.accent
-                              .withValues(alpha: p.isDark ? 0.35 : 0.28),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
                     ),
                   );
                 },

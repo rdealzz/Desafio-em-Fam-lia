@@ -230,11 +230,6 @@ class _Podio extends StatelessWidget {
       decoration: BoxDecoration(
         color: p.surface,
         borderRadius: BorderRadius.circular(Radii.xl),
-        border: Border.all(color: p.border),
-        boxShadow: [
-          BoxShadow(
-              color: p.shadow, blurRadius: 24, offset: const Offset(0, 8)),
-        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -306,14 +301,8 @@ class _Degrau extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(Radii.md)),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    cor.withValues(alpha: p.isDark ? 0.45 : 0.30),
-                    cor.withValues(alpha: 0.04),
-                  ],
-                ),
+                // Degrau chapado, na cor do lugar em tom suave.
+                color: cor.withValues(alpha: p.isDark ? 0.28 : 0.16),
               ),
               child: h < 30
                   ? null

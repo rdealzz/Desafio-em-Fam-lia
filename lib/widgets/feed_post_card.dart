@@ -52,31 +52,15 @@ class FeedPostCard extends StatelessWidget {
     return RepaintBoundary(
       child: Container(
         decoration: BoxDecoration(
-          color: p.surface,
-          borderRadius: BorderRadius.circular(Radii.xl),
-          border: Border.all(
-            color: _premio ? p.gold.withValues(alpha: 0.45) : p.border,
-          ),
-          gradient: _premio
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color.alphaBlend(
-                      p.gold.withValues(alpha: p.isDark ? 0.16 : 0.12),
-                      p.surface,
-                    ),
-                    p.surface,
-                  ],
+          // Prêmio liberado ganha um tom quente chapado; o resto é o cartão
+          // branco de sempre, sem contorno nem sombra.
+          color: _premio
+              ? Color.alphaBlend(
+                  p.gold.withValues(alpha: p.isDark ? 0.16 : 0.10),
+                  p.surface,
                 )
-              : null,
-          boxShadow: [
-            BoxShadow(
-              color: p.shadow,
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
+              : p.surface,
+          borderRadius: BorderRadius.circular(Radii.xl),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -258,31 +242,25 @@ class _AvatarAutor extends StatelessWidget {
       ),
     );
 
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: p.border, width: 1.5),
-      ),
-      child: ClipOval(
-        child: SizedBox(
-          width: _tam - 7,
-          height: _tam - 7,
-          child: temFoto
-              ? Image.network(
-                  post.authorPhotoUrl!,
-                  fit: BoxFit.cover,
-                  cacheWidth: 120,
-                  errorBuilder: (_, __, ___) => bicho,
-                )
-              : bicho,
-        ),
+    return ClipOval(
+      child: SizedBox(
+        width: _tam,
+        height: _tam,
+        child: temFoto
+            ? Image.network(
+                post.authorPhotoUrl!,
+                fit: BoxFit.cover,
+                cacheWidth: 120,
+                errorBuilder: (_, __, ___) => bicho,
+              )
+            : bicho,
       ),
     );
   }
 }
 
-/// "+150" numa pílula com o gradiente do cofre: são os pontos que entraram.
+/// "+150" num selo azul-claro, como os badges do iOS: são os pontos que
+/// entraram.
 class _Pontos extends StatelessWidget {
   const _Pontos({required this.pontos});
 
@@ -294,15 +272,15 @@ class _Pontos extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        gradient: p.accentGradient,
+        color: p.accentSoft,
         borderRadius: BorderRadius.circular(Radii.pill),
       ),
       child: Text(
         '+${Formatters.points(pontos)}',
         style: TextStyle(
-          color: p.onAccent,
-          fontSize: 13,
-          fontWeight: FontWeight.w800,
+          color: p.accent,
+          fontSize: 13.5,
+          fontWeight: FontWeight.w700,
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),
@@ -525,10 +503,6 @@ class _ReacaoState extends State<_Reacao> with SingleTickerProviderStateMixin {
           decoration: BoxDecoration(
             color: ativa ? p.accentSoft : p.surfaceSunken,
             borderRadius: BorderRadius.circular(Radii.pill),
-            border: Border.all(
-              color:
-                  ativa ? p.accent.withValues(alpha: 0.6) : Colors.transparent,
-            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -556,7 +530,7 @@ class _ReacaoState extends State<_Reacao> with SingleTickerProviderStateMixin {
   }
 }
 
-/// Faixa das cartas: a cor e o ícone da carta, em degradê até sumir.
+/// Faixa das cartas: a cor e o ícone da carta, num tom suave.
 class _Faixa extends StatelessWidget {
   const _Faixa({required this.post});
 
@@ -578,12 +552,7 @@ class _Faixa extends StatelessWidget {
         vertical: 10,
       ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            cor.withValues(alpha: p.isDark ? 0.24 : 0.14),
-            cor.withValues(alpha: 0),
-          ],
-        ),
+        color: cor.withValues(alpha: p.isDark ? 0.18 : 0.10),
       ),
       child: Row(
         children: [

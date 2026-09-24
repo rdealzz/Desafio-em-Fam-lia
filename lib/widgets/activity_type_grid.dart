@@ -100,15 +100,14 @@ class _Cartao extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Ícone num selo: cinza em repouso, com o gradiente quando
-          // escolhido. Dá peso ao selecionado sem colorir a grade inteira.
+          // Ícone num selo: cinza em repouso, azul quando escolhido. Dá
+          // peso ao selecionado sem colorir a grade inteira.
           AnimatedContainer(
             duration: Motion.base,
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: selecionado ? null : p.surfaceSunken,
-              gradient: selecionado ? p.accentGradient : null,
+              color: selecionado ? p.accent : p.surfaceSunken,
               borderRadius: BorderRadius.circular(Radii.sm),
             ),
             child: Icon(
@@ -138,7 +137,7 @@ class _Cartao extends StatelessWidget {
                 // Duas linhas: em celular estreito a regra inteira não cabe
                 // numa só, e cortada ela perdia justamente o tempo.
                 Text(
-                  '${tipo.blockPoints} pts a cada ${tipo.blockMinutes} min',
+                  '${tipo.blockPoints} pts a cada ${tipo.blockMinutes}\u00A0min',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: t.bodySmall,

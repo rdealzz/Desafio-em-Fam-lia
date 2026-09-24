@@ -10,11 +10,10 @@ import 'ui/entrada.dart';
 
 /// O Cofre da Semana — bloco principal da Tela 1.
 ///
-/// O número continua sendo o herói; o que mudou é o entorno. Um brilho do
-/// azul atrás do total dá profundidade sem virar o cartão roxo chapado de
-/// antes, a barra mostra os prêmios como marcos no caminho, e o rodapé troca
-/// o "faltam X pts" solto por um ritmo: quantos pontos por dia, e quanto é
-/// isso para cada um.
+/// Cartão branco sobre o cinza, como um widget do iOS: o número é o herói,
+/// a barra mostra os prêmios como marcos no caminho, e o rodapé dá o ritmo —
+/// quantos pontos por dia, e quanto é isso para cada um. Sem brilho, sem
+/// sombra, sem gradiente: a cor fica para o que muda.
 class VaultProgressCard extends StatelessWidget {
   const VaultProgressCard({super.key, required this.family});
 
@@ -27,7 +26,6 @@ class VaultProgressCard extends StatelessWidget {
     final bateu = family.goalReached;
     final pace = WeeklyPace.of(family, DateTime.now());
     final meta = family.weeklyGoal;
-    final brilho = bateu ? p.gold : p.accentAlt;
 
     final marcos = [
       for (final r in family.rewardsThisWeek)
@@ -38,92 +36,56 @@ class VaultProgressCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: p.surface,
         borderRadius: BorderRadius.circular(Radii.xl),
-        border: Border.all(color: p.border),
-        boxShadow: [
-          BoxShadow(
-            color: p.shadow,
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Radii.xl),
-        child: Stack(
+      child: Padding(
+        padding: const EdgeInsets.all(Space.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Brilho difuso no canto: é luz, não pintura. Some no escuro o
-            // bastante para não virar mancha.
-            Positioned(
-              top: -90,
-              right: -70,
-              child: IgnorePointer(
-                child: Container(
-                  width: 240,
-                  height: 240,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        brilho.withValues(alpha: p.isDark ? 0.22 : 0.16),
-                        brilho.withValues(alpha: 0),
-                      ],
-                    ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'COFRE DA SEMANA',
+                    style: t.labelMedium,
                   ),
                 ),
-              ),
+                _Selo(pace: pace, bateu: bateu),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.all(Space.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'COFRE DA SEMANA',
-                          style: t.labelMedium,
-                        ),
-                      ),
-                      _Selo(pace: pace, bateu: bateu),
-                    ],
+            const SizedBox(height: Space.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                NumeroAnimado(
+                  valor: family.vaultThisWeek,
+                  formatar: Formatters.points,
+                  style: t.displayLarge,
+                ),
+                const SizedBox(width: Space.sm),
+                Text(
+                  '/ ${Formatters.points(meta)}',
+                  style: t.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: p.textMuted,
                   ),
-                  const SizedBox(height: Space.sm),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      NumeroAnimado(
-                        valor: family.vaultThisWeek,
-                        formatar: Formatters.points,
-                        style: t.displayLarge,
-                      ),
-                      const SizedBox(width: Space.sm),
-                      Text(
-                        '/ ${Formatters.points(meta)}',
-                        style: t.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: p.textMuted,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${(family.progress * 100).round()}%',
-                        style: t.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: bateu ? p.gold : p.accent,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
+                ),
+                const Spacer(),
+                Text(
+                  '${(family.progress * 100).round()}%',
+                  style: t.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: bateu ? p.gold : p.accent,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
-                  const SizedBox(height: Space.lg),
-                  BarraMarcos(valor: family.progress, marcos: marcos),
-                  const SizedBox(height: Space.lg),
-                  _Ritmo(family: family, pace: pace),
-                ],
-              ),
+                ),
+              ],
             ),
+            const SizedBox(height: Space.lg),
+            BarraMarcos(valor: family.progress, marcos: marcos),
+            const SizedBox(height: Space.lg),
+            _Ritmo(family: family, pace: pace),
           ],
         ),
       ),

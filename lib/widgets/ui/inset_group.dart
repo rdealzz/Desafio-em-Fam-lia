@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -18,9 +19,13 @@ class InsetGroup extends StatelessWidget {
     this.header,
     this.footer,
     this.trailing,
+    this.dividerIndent = InsetRow.dividerIndent,
   });
 
   final List<Widget> children;
+
+  /// Onde o separador começa. O padrão acompanha as linhas com ícone.
+  final double dividerIndent;
   final String? header;
   final String? footer;
 
@@ -51,7 +56,6 @@ class InsetGroup extends StatelessWidget {
           decoration: BoxDecoration(
             color: p.surface,
             borderRadius: BorderRadius.circular(Radii.card),
-            border: Border.all(color: p.border),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(Radii.card),
@@ -62,8 +66,9 @@ class InsetGroup extends StatelessWidget {
                     // Recuado até onde o texto começa: o separador organiza
                     // sem cortar a linha inteira.
                     Padding(
-                      padding: const EdgeInsets.only(left: Space.lg),
-                      child: Divider(height: 1, thickness: 1, color: p.border),
+                      padding: EdgeInsets.only(left: dividerIndent),
+                      child: Divider(
+                          height: 1, thickness: 0.5, color: p.borderStrong),
                     ),
                   children[i],
                 ],
@@ -114,6 +119,12 @@ class InsetRow extends StatefulWidget {
   final Color? tint;
   final EdgeInsets padding;
 
+  /// Lado do quadradinho do ícone.
+  static const double iconTile = 30;
+
+  /// Recuo do separador numa linha com ícone: começa onde o texto começa.
+  static const double dividerIndent = Space.lg + iconTile + Space.md;
+
   @override
   State<InsetRow> createState() => _InsetRowState();
 }
@@ -150,7 +161,17 @@ class _InsetRowState extends State<InsetRow> {
               widget.leading!,
               const SizedBox(width: Space.md),
             ] else if (widget.icon != null) ...[
-              Icon(widget.icon, size: 20, color: widget.tint ?? p.textSecondary),
+              // Quadradinho colorido com o ícone em branco — o desenho dos
+              // Ajustes do iPhone. Sem cor definida, o cinza do sistema.
+              Container(
+                width: InsetRow.iconTile,
+                height: InsetRow.iconTile,
+                decoration: BoxDecoration(
+                  color: widget.tint ?? p.textMuted,
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Icon(widget.icon, size: 18, color: Colors.white),
+              ),
               const SizedBox(width: Space.md),
             ],
             Expanded(
@@ -191,7 +212,11 @@ class _InsetRowState extends State<InsetRow> {
             ],
             if (tocavel && widget.showChevron) ...[
               const SizedBox(width: Space.xs),
-              Icon(Icons.chevron_right_rounded, size: 19, color: p.textMuted),
+              Icon(
+                CupertinoIcons.chevron_forward,
+                size: 15,
+                color: p.borderStrong,
+              ),
             ],
           ],
         ),

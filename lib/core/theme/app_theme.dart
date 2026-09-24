@@ -71,7 +71,8 @@ class AppTheme {
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: p.surfaceSunken,
+        // Campo branco sobre o cinza, como nos formulários do iOS.
+        fillColor: p.surface,
         hintStyle: text.bodyMedium?.copyWith(color: p.textMuted),
         labelStyle: text.bodyMedium?.copyWith(color: p.textSecondary),
         contentPadding: const EdgeInsets.symmetric(
@@ -84,7 +85,7 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Radii.md),
-          borderSide: BorderSide(color: p.border),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Radii.md),
@@ -167,82 +168,91 @@ class AppTheme {
     );
   }
 
+  /// Escala do iOS (Large Title, Title, Headline, Body, Footnote), com a
+  /// Inter no lugar da SF. Bold no máximo: o ExtraBold de antes pesava e
+  /// deixava os números com cara de placar de fliperama.
   static TextTheme _textTheme(Palette p) {
     return TextTheme(
-      // Número gigante de estatística: o dado é o herói da tela.
+      // Número de estatística: o dado é o herói da tela.
       displayLarge: TextStyle(
-        fontSize: 52,
+        fontSize: 48,
         height: 1.0,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -2.0,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -1.6,
         color: p.textPrimary,
         fontFeatures: tabular,
       ),
       displayMedium: TextStyle(
-        fontSize: 36,
+        fontSize: 34,
         height: 1.05,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -1.2,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -1.0,
         color: p.textPrimary,
         fontFeatures: tabular,
       ),
+      // Large Title.
       headlineMedium: TextStyle(
-        fontSize: 26,
-        height: 1.15,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.7,
+        fontSize: 30,
+        height: 1.12,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.9,
         color: p.textPrimary,
       ),
       titleLarge: TextStyle(
-        fontSize: 19,
+        fontSize: 20,
         height: 1.25,
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.35,
+        letterSpacing: -0.45,
         color: p.textPrimary,
       ),
+      // Headline.
       titleMedium: TextStyle(
         fontSize: 16,
         height: 1.3,
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.2,
+        letterSpacing: -0.3,
         color: p.textPrimary,
       ),
       bodyLarge: TextStyle(
-        fontSize: 15.5,
-        height: 1.45,
+        fontSize: 16,
+        height: 1.4,
         fontWeight: FontWeight.w400,
+        letterSpacing: -0.2,
         color: p.textPrimary,
       ),
       bodyMedium: TextStyle(
-        fontSize: 14,
-        height: 1.45,
-        fontWeight: FontWeight.w400,
-        color: p.textSecondary,
-      ),
-      bodySmall: TextStyle(
-        fontSize: 12.5,
+        fontSize: 14.5,
         height: 1.4,
         fontWeight: FontWeight.w400,
+        letterSpacing: -0.1,
+        color: p.textSecondary,
+      ),
+      // Footnote.
+      bodySmall: TextStyle(
+        fontSize: 13,
+        height: 1.35,
+        fontWeight: FontWeight.w400,
+        letterSpacing: -0.05,
         color: p.textMuted,
       ),
       labelLarge: TextStyle(
-        fontSize: 15,
+        fontSize: 15.5,
         height: 1.2,
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.1,
+        letterSpacing: -0.25,
         color: p.textPrimary,
       ),
-      // Rótulo de seção: caixa alta, espaçada, pequena. Sinaliza estrutura
-      // sem competir com o conteúdo.
+      // Cabeçalho de grupo do iOS: caixa alta pequena, peso normal, cinza.
+      // Estrutura a tela sem gritar.
       labelMedium: TextStyle(
-        fontSize: 11.5,
+        fontSize: 12.5,
         height: 1.2,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.9,
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0.25,
         color: p.textMuted,
       ),
       labelSmall: TextStyle(
-        fontSize: 11,
+        fontSize: 11.5,
         height: 1.2,
         fontWeight: FontWeight.w600,
         color: p.textSecondary,

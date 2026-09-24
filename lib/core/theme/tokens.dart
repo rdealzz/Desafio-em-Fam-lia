@@ -53,18 +53,4 @@ class Motion {
   static const Curve enter = Curves.easeOutCubic;
   static const Curve exit = Curves.easeInCubic;
 
-  /// Volta com leve ultrapassagem, como mola — é o que dá peso ao toque.
-  static const Curve press = Curves.easeOutBack;
-}
-
-/// Profundidade por camadas.
-///
-/// A referência de 2026 não é neumorfismo (que envelheceu), e sim elevação
-/// seletiva: sombra difusa marcando a distância do plano, não relevo simulado
-/// com luz falsa em dois lados.
-class Depth {
-  const Depth._();
-
-  /// Deslocamento sólido sob o botão 3D — é o que ele "afunda" ao ser tocado.
-  static const double press = 4;
 }

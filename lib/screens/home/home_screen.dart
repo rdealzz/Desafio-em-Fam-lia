@@ -189,7 +189,6 @@ class _BotaoTema extends StatelessWidget {
         decoration: BoxDecoration(
           color: p.surface,
           borderRadius: BorderRadius.circular(Radii.group),
-          border: Border.all(color: p.border),
         ),
         child: Icon(
           escuro ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
@@ -340,7 +339,7 @@ class _GrupoCartas extends StatelessWidget {
         ),
         InsetRow(
           icon: Icons.local_fire_department_outlined,
-          tint: p.energy,
+          tint: p.warning,
           title: 'Desafio Impossível',
           subtitle: 'mini-desafio relâmpago para o grupo',
           onTap: () => PublishCardSheet.show(
@@ -350,6 +349,7 @@ class _GrupoCartas extends StatelessWidget {
         ),
         InsetRow(
           icon: Icons.theater_comedy_outlined,
+          tint: p.accentAlt,
           title: 'Punição Leve',
           subtitle: 'a prenda de domingo de quem fez menos',
           onTap: () => PublishCardSheet.show(context, FeedPostType.punishment),
@@ -374,6 +374,7 @@ class _GrupoConta extends StatelessWidget {
       children: [
         InsetRow(
           icon: Icons.timeline_rounded,
+          tint: p.energy,
           title: 'Meu progresso',
           subtitle: streak > 0
               ? 'sequência de $streak ${streak == 1 ? 'dia' : 'dias'}'
@@ -389,6 +390,7 @@ class _GrupoConta extends StatelessWidget {
         ),
         InsetRow(
           icon: Icons.face_retouching_natural_rounded,
+          tint: p.accentAlt,
           title: 'Editar meu perfil',
           subtitle: 'foto, nome que aparece e cor',
           onTap: () => ProfileEditScreen.open(context),
@@ -396,12 +398,14 @@ class _GrupoConta extends StatelessWidget {
         const _LinhaAvisos(),
         InsetRow(
           icon: Icons.tune_rounded,
+          tint: p.textMuted,
           title: 'Ajustes da família',
           subtitle: 'meta da semana e foto comprovante',
           onTap: () => FamilySettingsScreen.open(context),
         ),
         InsetRow(
           icon: Icons.ios_share_rounded,
+          tint: p.success,
           title: 'Convidar alguém',
           subtitle: 'copiar o código da família',
           onTap: () {
@@ -455,6 +459,7 @@ class _LinhaAvisos extends StatelessWidget {
       icon: avisos.ligados
           ? Icons.notifications_active_outlined
           : Icons.notifications_none_rounded,
+      tint: p.danger,
       title: 'Avisos neste aparelho',
       subtitle: avisos.ligados
           ? 'quando alguém treinar, com o app aberto'

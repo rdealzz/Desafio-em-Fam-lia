@@ -172,10 +172,6 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
                     ),
                   ],
                   const SizedBox(height: Space.xl),
-                  const Entrada(
-                    ordem: 2,
-                    child: _Etapa(numero: 1, titulo: 'Modalidade'),
-                  ),
                   Entrada(
                     ordem: 2,
                     child: ActivityTypeGrid(
@@ -184,7 +180,7 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
                     ),
                   ),
                   const SizedBox(height: Space.xxl),
-                  const _Etapa(numero: 2, titulo: 'Duração'),
+                  const _Etapa(titulo: 'Duração'),
                   Surface(
                     radius: Radii.xl,
                     child: Column(
@@ -261,7 +257,6 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
                   ],
                   const SizedBox(height: Space.xxl),
                   _Etapa(
-                    numero: 3,
                     titulo: 'Comprovante',
                     detalhe: exigeFoto ? 'obrigatório' : 'opcional',
                   ),
@@ -273,7 +268,6 @@ class _RegisterActivityScreenState extends State<RegisterActivityScreen> {
                   ),
                   const SizedBox(height: Space.xxl),
                   const _Etapa(
-                    numero: 4,
                     titulo: 'Comentário',
                     detalhe: 'opcional',
                   ),
@@ -545,44 +539,25 @@ class _BotaoSync extends StatelessWidget {
   }
 }
 
-/// Título de cada passo do formulário: número num círculo e o nome.
+/// Cabeçalho de cada bloco do formulário, no estilo dos grupos do iOS:
+/// caixa alta pequena e cinza, com o detalhe ("obrigatório") ao lado.
 class _Etapa extends StatelessWidget {
-  const _Etapa({required this.numero, required this.titulo, this.detalhe});
+  const _Etapa({required this.titulo, this.detalhe});
 
-  final int numero;
   final String titulo;
   final String? detalhe;
 
   @override
   Widget build(BuildContext context) {
-    final p = context.palette;
     final t = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: Space.md),
+      padding: const EdgeInsets.fromLTRB(Space.md, 0, Space.md, Space.sm),
       child: Row(
         children: [
-          Container(
-            width: 22,
-            height: 22,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              gradient: p.accentGradient,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '$numero',
-              style: TextStyle(
-                color: p.onAccent,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: Space.sm),
-          Text(titulo, style: t.titleMedium),
+          Text(titulo.toUpperCase(), style: t.labelMedium),
           if (detalhe != null) ...[
             const SizedBox(width: Space.sm),
-            Text(detalhe!, style: t.bodySmall),
+            Text('· $detalhe', style: t.labelMedium),
           ],
         ],
       ),
@@ -716,10 +691,6 @@ class _Foto extends StatelessWidget {
         decoration: BoxDecoration(
           color: p.surface,
           borderRadius: BorderRadius.circular(Radii.xl),
-          border: Border.all(
-            color: obrigatoria ? p.accent.withValues(alpha: 0.45) : p.border,
-            width: obrigatoria ? 1.5 : 1,
-          ),
         ),
         child: Column(
           children: [
@@ -727,11 +698,11 @@ class _Foto extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                gradient: p.accentGradient,
+                color: p.accentSoft,
                 shape: BoxShape.circle,
               ),
               child:
-                  Icon(Icons.photo_camera_rounded, size: 24, color: p.onAccent),
+                  Icon(Icons.photo_camera_rounded, size: 24, color: p.accent),
             ),
             const SizedBox(height: Space.md),
             Text(
@@ -928,14 +899,7 @@ class _BarraDeposito extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: p.surface,
-        border: Border(top: BorderSide(color: p.border)),
-        boxShadow: [
-          BoxShadow(
-            color: p.shadow,
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        border: Border(top: BorderSide(color: p.borderStrong, width: 0.5)),
       ),
       child: Row(
         children: [
@@ -1085,25 +1049,17 @@ class Comemoracao extends StatelessWidget {
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
               duration: const Duration(milliseconds: 550),
-              curve: Curves.easeOutBack,
-              builder: (context, v, child) =>
-                  Transform.scale(scale: v, child: child),
+              curve: Curves.easeOutCubic,
+              builder: (context, v, child) => Opacity(
+                opacity: v,
+                child: Transform.scale(scale: 0.85 + 0.15 * v, child: child),
+              ),
               child: Container(
                 width: 68,
                 height: 68,
                 decoration: BoxDecoration(
-                  gradient: r.goalReached
-                      ? LinearGradient(colors: [p.gold, p.energy])
-                      : p.accentGradient,
+                  color: r.goalReached ? p.gold : p.accent,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: (r.goalReached ? p.gold : p.accent)
-                          .withValues(alpha: 0.35),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
                 ),
                 child: Icon(
                   r.goalReached

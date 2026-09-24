@@ -349,68 +349,62 @@ class _ResumoDeHoje extends StatelessWidget {
       );
     }
 
-    return Container(
+    return Surface(
       padding: const EdgeInsets.all(Space.lg),
-      decoration: BoxDecoration(
-        gradient: p.accentGradient,
-        borderRadius: BorderRadius.circular(Radii.xl),
-        boxShadow: [
-          BoxShadow(
-            color: p.accent.withValues(alpha: p.isDark ? 0.25 : 0.30),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+      radius: Radii.xl,
+      child: Row(
+        children: [
+          Expanded(
+            child: _NumeroDoDia(
+              valor: '${resumo.treinos}',
+              rotulo: resumo.treinos == 1 ? 'treino hoje' : 'treinos hoje',
+              cor: p.textPrimary,
+            ),
+          ),
+          Expanded(
+            child: _NumeroDoDia(
+              valor: Formatters.duration(resumo.minutos),
+              rotulo: 'de exercício',
+              cor: p.textPrimary,
+            ),
+          ),
+          Expanded(
+            child: _NumeroDoDia(
+              valor: '+${Formatters.points(resumo.pontos)}',
+              rotulo: 'no cofre',
+              cor: p.accent,
+            ),
           ),
         ],
-      ),
-      child: DefaultTextStyle.merge(
-        style: TextStyle(color: p.onAccent),
-        child: Row(
-          children: [
-            Expanded(
-              child: _NumeroDoDia(
-                valor: '${resumo.treinos}',
-                rotulo: resumo.treinos == 1 ? 'treino hoje' : 'treinos hoje',
-              ),
-            ),
-            Expanded(
-              child: _NumeroDoDia(
-                valor: Formatters.duration(resumo.minutos),
-                rotulo: 'de exercício',
-              ),
-            ),
-            Expanded(
-              child: _NumeroDoDia(
-                valor: '+${Formatters.points(resumo.pontos)}',
-                rotulo: 'no cofre',
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 }
 
 class _NumeroDoDia extends StatelessWidget {
-  const _NumeroDoDia({required this.valor, required this.rotulo});
+  const _NumeroDoDia({
+    required this.valor,
+    required this.rotulo,
+    required this.cor,
+  });
 
   final String valor;
   final String rotulo;
+  final Color cor;
 
   @override
   Widget build(BuildContext context) {
-    final p = context.palette;
+    final t = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           valor,
           maxLines: 1,
-          style: TextStyle(
+          style: t.titleLarge?.copyWith(
             fontSize: 22,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.6,
-            color: p.onAccent,
+            fontWeight: FontWeight.w700,
+            color: cor,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
@@ -419,18 +413,15 @@ class _NumeroDoDia extends StatelessWidget {
           rotulo,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: p.onAccent.withValues(alpha: 0.8),
-          ),
+          style: t.bodySmall,
         ),
       ],
     );
   }
 }
 
-/// Filtro em pílulas, com a escolhida deslizando entre elas.
+/// Controle segmentado do iOS: trilho cinza, a opção escolhida num bloco
+/// branco que desliza.
 class _Filtros extends StatelessWidget {
   const _Filtros({required this.atual, required this.onMudar});
 
@@ -444,11 +435,12 @@ class _Filtros extends StatelessWidget {
     const opcoes = FiltroMural.values;
 
     return Container(
-      height: 40,
-      padding: const EdgeInsets.all(3),
+      height: 34,
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: p.surfaceSunken,
-        borderRadius: BorderRadius.circular(Radii.pill),
+        // Cinza sobre o cinza do fundo: o trilho do segmentado do iOS.
+        color: p.isDark ? p.surfaceRaised : const Color(0x1F767680),
+        borderRadius: BorderRadius.circular(9),
       ),
       child: LayoutBuilder(
         builder: (context, box) {
@@ -464,13 +456,13 @@ class _Filtros extends StatelessWidget {
                 width: largura,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: p.surfaceRaised,
-                    borderRadius: BorderRadius.circular(Radii.pill),
-                    boxShadow: [
+                    color: p.isDark ? const Color(0xFF636366) : p.surface,
+                    borderRadius: BorderRadius.circular(7),
+                    boxShadow: const [
                       BoxShadow(
-                        color: p.shadow,
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                        color: Color(0x1F000000),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
@@ -487,7 +479,7 @@ class _Filtros extends StatelessWidget {
                           child: AnimatedDefaultTextStyle(
                             duration: Motion.fast,
                             style: t.labelLarge!.copyWith(
-                              fontSize: 14,
+                              fontSize: 13.5,
                               color:
                                   f == atual ? p.textPrimary : p.textSecondary,
                             ),

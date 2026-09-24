@@ -30,8 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usuario = TextEditingController();
   final _senha = TextEditingController();
   final _nome = TextEditingController();
-  final _nomeFamilia =
-      TextEditingController(text: FamilyService.nomePadrao);
+  final _nomeFamilia = TextEditingController(text: FamilyService.nomePadrao);
   final _convite = TextEditingController();
 
   bool _criandoConta = false;
@@ -159,8 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         for (final e in _papeis.entries)
                           DropdownMenuItem(value: e.key, child: Text(e.value)),
                       ],
-                      onChanged: (v) =>
-                          setState(() => _papel = v ?? 'membro'),
+                      onChanged: (v) => setState(() => _papel = v ?? 'membro'),
                     ),
                   ),
                   Padding(
@@ -222,8 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: Icons.lock_outline_rounded,
                   obscure: !_mostrarSenha,
                   trailing: GestureDetector(
-                    onTap: () =>
-                        setState(() => _mostrarSenha = !_mostrarSenha),
+                    onTap: () => setState(() => _mostrarSenha = !_mostrarSenha),
                     behavior: HitTestBehavior.opaque,
                     child: Icon(
                       _mostrarSenha
@@ -495,7 +492,12 @@ class _Campo extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: p.textSecondary),
+          // Na largura do quadradinho das linhas com ícone: assim o texto do
+          // campo e o separador começam no mesmo lugar que nas outras linhas.
+          SizedBox(
+            width: InsetRow.iconTile,
+            child: Icon(icon, size: 20, color: p.textMuted),
+          ),
           const SizedBox(width: Space.md),
           Expanded(
             child: Column(

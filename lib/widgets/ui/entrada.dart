@@ -2,7 +2,8 @@ import 'package:flutter/widgets.dart';
 
 import '../../core/theme/tokens.dart';
 
-/// Entrada em cascata: o bloco sobe alguns pixels enquanto aparece.
+/// Entrada em cascata: o bloco sobe uns poucos pixels enquanto aparece —
+/// discreto, como as transições do iOS.
 ///
 /// Cada bloco da tela recebe um [ordem] e entra um pouco depois do anterior.
 /// É a diferença entre a tela "piscar" pronta e ela se montar diante da
@@ -34,7 +35,7 @@ class Entrada extends StatelessWidget {
       builder: (context, v, child) => Opacity(
         opacity: v,
         child: Transform.translate(
-          offset: Offset(0, (1 - v) * 14),
+          offset: Offset(0, (1 - v) * 8),
           child: child,
         ),
       ),
